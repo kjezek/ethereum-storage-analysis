@@ -77,19 +77,16 @@ exports.iterateBlocks = function (cb1) {
 };
 
 
-
-
 /**
- * Iterate all blocks. Start from block Zero and go to MAX
+ * Iterate blocks between Start and End number.
  */
-exports.iterateBlocks = function (cb1) {
+exports.iterateBlocks2 = function (start, end, cb1) {
 
-    let blockNumber;
-    const MAX = 10000000;
+    let blockNumber = start;
 
     // iterate all blocks until there is no previous block
     // WHIST is a loop - it contains condition, next, and error callback
-    async.whilst(cb => cb(null, blockNumber < MAX),  // check condition
+    async.whilst(cb => cb(null, blockNumber < end),  // check condition
         run,        // run next, callback must receive error and result obj.
         err => {
             return (cb1(err));
@@ -100,10 +97,11 @@ exports.iterateBlocks = function (cb1) {
         let block;
 
         async.series([getBlock], function (err) {
-            cb1(err, block, block.hash());
 
-            blockNumber.iadd(1);
-            cb2(err, block, block.hash());
+            blockNumber += 1;
+
+            if (block) cb1(err, block, block.hash());  // callback only if we have data
+            if (err && err.type === 'NotFoundError') cb2(null, block); else cb2(err, block);   // Ignore not found errors
         });
 
         function getBlock(cb3) {
