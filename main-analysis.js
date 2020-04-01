@@ -20,24 +20,25 @@ blocks.iterateBlocks((err, block, blockHash) => {
         writeStream.end();
         console.log(err || `BLOCK DONE`)
         console.timeEnd('all-blocks');
-        return;
+
+    } else {
+        const blockNumber = utils.bufferToInt(block.header.number);
+        const blockHashStr = block.hash().toString('hex');
+        const stateRootStr = block.header.stateRoot.toString('hex');
+        const transactionTrieStr = block.header.transactionsTrie.toString('hex');
+        const receiptTrieStr = block.header.receiptTrie.toString('hex');
+
+        //console.log(err || `BLOCK ${blockNumber}: ${blockHashStr}`)
+
+        let newLine = []
+        newLine.push(blockNumber)
+        newLine.push(blockHashStr)
+        newLine.push(stateRootStr)
+        newLine.push(transactionTrieStr)
+        newLine.push(receiptTrieStr)
+        writeStream.write(newLine.join(',')+ '\n', () => {});
     }
 
-    const blockNumber = utils.bufferToInt(block.header.number);
-    const blockHashStr = block.hash().toString('hex');
-    const stateRootStr = block.header.stateRoot.toString('hex');
-    const transactionTrieStr = block.header.transactionsTrie.toString('hex');
-    const receiptTrieStr = block.header.receiptTrie.toString('hex');
-
-    //console.log(err || `BLOCK ${blockNumber}: ${blockHashStr}`)
-
-    let newLine = []
-    newLine.push(blockNumber)
-    newLine.push(blockHashStr)
-    newLine.push(stateRootStr)
-    newLine.push(transactionTrieStr)
-    newLine.push(receiptTrieStr)
-    writeStream.write(newLine.join(',')+ '\n', () => {});
 });
 
 
