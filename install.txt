@@ -1,6 +1,8 @@
 brew install node
 
 npm install level-rocksdb
+npm install level
+npm install asyn
 npm install ethereumjs-blockchain
 npm install ethereumjs-util
 
