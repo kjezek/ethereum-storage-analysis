@@ -88,27 +88,18 @@ exports.iterateBlocks2 = function (start, end, cb1) {
     // WHIST is a loop - it contains condition, next, and error callback
     async.whilst(cb => cb(null, blockNumber < end),  // check condition
         run,        // run next, callback must receive error and result obj.
-        err => {
-            return (cb1(err));
-        }  // end condition
+        err =>  (cb1(err)) // end condition
     );
 
     function run(cb2) {
         let block;
 
-        async.series([getBlock], function (err) {
-
+        blockchain.getBlock(blockNumber, (err, b) => {
+            block = b;
             blockNumber += 1;
 
             if (block) cb1(err, block, block.hash());  // callback only if we have data
             if (err && err.type === 'NotFoundError') cb2(null, block); else cb2(err, block);   // Ignore not found errors
         });
-
-        function getBlock(cb3) {
-            blockchain.getBlock(blockNumber, (err, b) => {
-                block = b;
-                cb3(err);
-            });
-        }
     }
 };
