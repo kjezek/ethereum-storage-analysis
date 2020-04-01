@@ -1,6 +1,3 @@
-const DB_PATH="/Users/kjezek/Library/Ethereum/geth/chaindata"
-// const DB_PATH="/Users/kjezek/Library/Application Support/io.parity.ethereum/chains/ethereum/db/906a34e69aec8c0d/overlayrecent/db"
-
 
 const utils = require('ethereumjs-util');
 const async = require("async");
@@ -16,9 +13,9 @@ const fs = require("fs")
 function addCsvLineBlock(writeStream, block) {
     const blockNumber = utils.bufferToInt(block.header.number);
     const blockHashStr = block.hash().toString('hex');
-    const stateRootStr = block.header.stateRoot.toString('hex');
-    const transactionTrieStr = block.header.transactionsTrie.toString('hex');
-    const receiptTrieStr = block.header.receiptTrie.toString('hex');
+    const stateRootStr = block.header.stateRoot.toString();
+    const transactionTrieStr = block.header.transactionsTrie.toString();
+    const receiptTrieStr = block.header.receiptTrie.toString();
 
     //console.log(err || `BLOCK ${blockNumber}: ${blockHashStr}`)
 
@@ -32,19 +29,26 @@ function addCsvLineBlock(writeStream, block) {
 }
 
 
+/** START Program.  */
+const args = process.argv.slice(2);
+const dbPath = args[0];
+const startBlock = parseInt(args[1]);
+const endBlock = parseInt(args[2]);
 
-blocks.init(DB_PATH);
+const strRange = startBlock + '-' + endBlock;
 
-let writeStream = fs.createWriteStream('./csv/blocks.csv')
-console.time('all-blocks');
+blocks.init(dbPath);
+
+let writeStream = fs.createWriteStream('./csv/blocks_' + strRange + '.csv')
+console.time('Blocks-' + strRange);
 
 // iterate blocks, dump in  CSV
-blocks.iterateBlocks2(0, 10000, (err, block, blockHash) => {
+blocks.iterateBlocks2(startBlock, endBlock, (err, block, blockHash) => {
 
     if (err || !block) {
         writeStream.end();
         console.log(err || `BLOCK DONE`)
-        console.timeEnd('all-blocks');
+        console.timeEnd('Blocks-' + strRange);
     } else {
         addCsvLineBlock(writeStream, block);
     }
