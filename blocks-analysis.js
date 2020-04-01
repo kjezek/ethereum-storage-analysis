@@ -1,20 +1,17 @@
-const DB_PATH="/Users/kjezek/Library/Ethereum/geth/chaindata"
-// const DB_PATH="/Users/kjezek/Library/Application Support/io.parity.ethereum/chains/ethereum/db/906a34e69aec8c0d/overlayrecent/db"
-
-
-
-// const level = require('level-rocksdb')
-const level = require('level');
 const Blockchain = require('ethereumjs-blockchain').default;
 const utils = require('ethereumjs-util');
 const async = require("async");
+const level = require('level');
 
 // Open the RocksDB
-const dbOptions = {  };
-const db = level(DB_PATH, dbOptions)
+exports.init = function(DB_PATH) {
+    const dbOptions = {  };
+    const db = level(DB_PATH, dbOptions)
 
-const blockchainOpts = { db: db, hardfork:  "byzantium", validate : false }
-const blockchain =  new Blockchain(blockchainOpts);
+    const blockchainOpts = { db: db, hardfork:  "byzantium", validate : false }
+    blockchain =  new Blockchain(blockchainOpts);
+}
+
 
 /**
  * Read the last block from the DB
@@ -30,9 +27,9 @@ getLatestBlocks = function(cb) {
 };
 
 /**
- * Iterate all blocks
+ * Iterate all blocks. It starts from the latest one and goes to parents via parent hash
  */
-iterateBlocks = function (cb1) {
+exports.iterateBlocks = function (cb1) {
 
     let blockHash; // current block hash, changed every loop
 
@@ -49,7 +46,7 @@ iterateBlocks = function (cb1) {
             err => {
                 return (cb1(err));
             }  // end condition
-            );
+        );
     });
 
     function run(cb2) {
@@ -79,9 +76,41 @@ iterateBlocks = function (cb1) {
     }
 };
 
-iterateBlocks((err, block, blockHash) => {
-    const blockNumber = utils.bufferToInt(block.header.number);
-    const blockHashStr = blockHash.toString('hex');
-    console.log(err || `BLOCK ${blockNumber}: ${blockHashStr}`)
-});
 
+
+
+/**
+ * Iterate all blocks. Start from block Zero and go to MAX
+ */
+exports.iterateBlocks = function (cb1) {
+
+    let blockNumber;
+    const MAX = 10000000;
+
+    // iterate all blocks until there is no previous block
+    // WHIST is a loop - it contains condition, next, and error callback
+    async.whilst(cb => cb(null, blockNumber < MAX),  // check condition
+        run,        // run next, callback must receive error and result obj.
+        err => {
+            return (cb1(err));
+        }  // end condition
+    );
+
+    function run(cb2) {
+        let block;
+
+        async.series([getBlock], function (err) {
+            cb1(err, block, block.hash());
+
+            blockNumber.iadd(1);
+            cb2(err, block, block.hash());
+        });
+
+        function getBlock(cb3) {
+            blockchain.getBlock(blockNumber, (err, b) => {
+                block = b;
+                cb3(err);
+            });
+        }
+    }
+};
