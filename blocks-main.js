@@ -11,10 +11,10 @@ const fs = require("fs");
  */
 function addCsvLineBlock(writeStream, block) {
     const blockNumber = utils.bufferToInt(block.header.number);
-    const blockHashStr = block.hash().toString('hex');
-    const stateRootStr = block.header.stateRoot.toString('hex');
-    const transactionTrieStr = block.header.transactionsTrie.toString('hex');
-    const receiptTrieStr = block.header.receiptTrie.toString('hex');
+    const blockHashStr = utils.bufferToHex(block.hash());
+    const stateRootStr = utils.bufferToHex(block.header.stateRoot);
+    const transactionTrieStr = utils.bufferToHex(block.header.transactionsTrie);
+    const receiptTrieStr = utils.bufferToHex(block.header.receiptTrie);
 
     //console.log(err || `BLOCK ${blockNumber}: ${blockHashStr}`)
 

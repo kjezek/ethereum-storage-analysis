@@ -2,34 +2,27 @@ const Blockchain = require('ethereumjs-blockchain').default;
 const utils = require('ethereumjs-util');
 const async = require("async");
 const level = require('level');
+const rlp = require('rlp');
+const SecTrie = require('merkle-patricia-tree/secure');
+const Account = require('ethereumjs-account').default
+const BN = utils.BN;
+
+let db;
+let blockchainOpts;
 
 // Open the RocksDB
 exports.init = function(DB_PATH) {
     const dbOptions = {  };
-    const db = level(DB_PATH, dbOptions)
-
-    const blockchainOpts = { db: db, hardfork:  "byzantium", validate : false }
-    blockchain =  new Blockchain(blockchainOpts);
-}
-
-
-/**
- * Read the last block from the DB
- * @param cb
- */
-getLatestBlocks = function(cb) {
-    blockchain.getLatestBlock((err, block) => {
-        const blockNumber = utils.bufferToInt(block.header.number);
-        const blockHash = block.hash().toString('hex');
-        console.log(err || `LATEST BLOCK ${blockNumber}: ${blockHash}`)
-        cb(err, block);
-    });
+    db = level(DB_PATH, dbOptions)
+    blockchainOpts = { db: db, hardfork:  "byzantium", validate : false }
 };
+
 
 /**
  * Iterate all blocks. It starts from the latest one and goes to parents via parent hash
  */
 exports.iterateBlocks = function (cb1) {
+    const blockchain =  new Blockchain(blockchainOpts);
 
     let blockHash; // current block hash, changed every loop
 
@@ -74,6 +67,19 @@ exports.iterateBlocks = function (cb1) {
             });
         }
     }
+
+    /**
+     * Read the last block from the DB
+     * @param cb
+     */
+    function getLatestBlocks(cb) {
+        blockchain.getLatestBlock((err, block) => {
+            const blockNumber = utils.bufferToInt(block.header.number);
+            const blockHash = block.hash().toString('hex');
+            console.log(err || `LATEST BLOCK ${blockNumber}: ${blockHash}`)
+            cb(err, block);
+        });
+    };
 };
 
 
@@ -81,6 +87,7 @@ exports.iterateBlocks = function (cb1) {
  * Iterate blocks between Start and End number.
  */
 exports.iterateBlocks2 = function (start, end, cb1) {
+    const blockchain =  new Blockchain(blockchainOpts);
 
     let blockNumber = start;
 
@@ -102,4 +109,21 @@ exports.iterateBlocks2 = function (start, end, cb1) {
             if (err && err.type === 'NotFoundError') cb2(null, block); else cb2(err, block);   // Ignore not found errors
         });
     }
+};
+
+
+/**
+ * Iterate over all accounts of a block
+ * @param stateRoot trie root
+ * @param cb1 callback
+ */
+exports.iterateAccounts = function(stateRoot, cb1) {
+    let trie = new SecTrie(db, stateRoot);
+    let stream = trie.createReadStream()
+        .on('data', function (data) {
+            cb1(data.key, data.value);
+        })
+        .on('end', function () {
+            // console.log('Finished reading State Trie for: ' + stateRoot.toString('hex'));
+        })
 };
