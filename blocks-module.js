@@ -4,8 +4,7 @@ const async = require("async");
 const level = require('level');
 const rlp = require('rlp');
 const SecTrie = require('merkle-patricia-tree/secure');
-const Account = require('ethereumjs-account').default
-const BN = utils.BN;
+const Trie = require('merkle-patricia-tree/baseTrie');
 
 let db;
 let blockchainOpts;
@@ -124,6 +123,23 @@ exports.iterateAccounts = function(stateRoot, cb1) {
             cb1(data.key, data.value);
         })
         .on('end', function () {
-            // console.log('Finished reading State Trie for: ' + stateRoot.toString('hex'));
+            cb1(null, null);  // signal end
         })
+};
+
+/**
+ * Iterate over all transactions of a block
+ * @param transactionRoot trie root
+ * @param cb1 callback
+ */
+exports.iterateTransactionsTrie = function(transactionRoot, cb1) {
+    let trie = new Trie(db, transactionRoot);
+    let stream = trie.createReadStream()
+        .on('data', function (data) {
+            cb1(data.key, data.value);
+        })
+        .on('end', function () {
+            cb1(null, null);  // signal end
+        })
+
 };

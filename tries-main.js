@@ -4,6 +4,7 @@ const readline = require('readline');
 const blocks = require('./blocks-module');
 const rlp = require('rlp');
 const Account = require('ethereumjs-account').default;
+const Transaction = require('ethereumjs-tx').Transaction;
 const BN = utils.BN;
 
 /**
@@ -56,19 +57,56 @@ function readBlocksCSVFiles(path, cb) {
 analyseAccountsCB = ((blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr) => {
 
     const stateRoot = utils.toBuffer(stateRootStr);
+    let totalAccounts = 0;
+    let totalContractAccounts = 0;
+
+    console.time('Blocks-Account-' + blockNumber);  
+
     blocks.iterateAccounts(stateRoot, (key, value) => {
-        const acc = new Account(value)
-        console.log(`nonce: ${new BN(acc.nonce)}`)
-        console.log(`balance: ${new BN(acc.balance)}`)
-        console.log(`storageRoot: ${utils.bufferToHex(acc.stateRoot)}`)
-        console.log(`codeHash: ${utils.bufferToHex(acc.codeHash)}`)
-        // let rlpVal = rlp.decode(value);
-        // console.log(`key: ${utils.bufferToHex(key)} -> Value: ${utils.bufferToHex(rlp.decode(value))}`)
+
+        if (key && value) {
+            const acc = new Account(value);
+            totalAccounts++;
+            if (acc.isContract()) totalContractAccounts++
+        } else {
+            if (totalAccounts > 0) {
+                console.log(`Accounts: ${blockNumber} -> ${totalAccounts}, ${totalContractAccounts}`);
+                console.timeEnd('Blocks-Account-' + blockNumber);
+            }
+        }
+
+        // console.log(`nonce: ${new BN(acc.nonce)}`);
+        // console.log(`balance: ${new BN(acc.balance)}`);
+        // console.log(`storageRoot: ${utils.bufferToHex(acc.stateRoot)}`);
+        // console.log(`codeHash: ${utils.bufferToHex(acc.codeHash)}`);
     });
-
-
 });
 
+/**
+ * This callback analyses Account State Trie
+ * @type {analyseAccountsCB}
+ */
+analyseTransactionCB = ((blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr) => {
+
+    const trieRoot = utils.toBuffer(transactionTrieStr);
+    let totalTransactions = 0;
+
+    console.time('Blocks-Transactions-' + blockNumber);
+
+    // console.log(transactionTrieStr + "->" + trieRoot)
+    blocks.iterateTransactionsTrie(trieRoot, (key, value) => {
+        if (key && value) {
+            const trans = new Transaction(value);
+            console.log("Tx:" + trans);
+            totalTransactions++;
+        } else {
+            if (totalTransactions > 0) {
+                console.log(`Transactions: ${blockNumber} -> ${totalTransactions}`);
+                console.timeEnd('Blocks-Transactions-' + blockNumber);
+            }
+        }
+    });
+});
 
 /**
  * Main program - read blocks from pre-generated CSV files and
@@ -85,4 +123,5 @@ blocks.init(dbPath);
 
 const CSV_PATH = "csv/";
 
-readBlocksCSVFiles(CSV_PATH, analyseAccountsCB);
+// readBlocksCSVFiles(CSV_PATH, analyseAccountsCB);
+readBlocksCSVFiles(CSV_PATH, analyseTransactionCB);

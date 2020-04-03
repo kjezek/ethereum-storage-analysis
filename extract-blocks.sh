@@ -10,3 +10,4 @@ STEP_BLOCK=1000000
 rm csv/*.csv
 node blocks-main.js $DB_PATH $START_BLOCK $MAX_BLOCK $STEP_BLOCK
 
+#node tries-main.js $DB_PATH
