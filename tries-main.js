@@ -59,18 +59,26 @@ analyseAccountsCB = ((blockNumber, blockHashStr, stateRootStr, transactionTrieSt
     const stateRoot = utils.toBuffer(stateRootStr);
     let totalAccounts = 0;
     let totalContractAccounts = 0;
+    let totalContractValues = 0;
 
     console.time('Blocks-Account-' + blockNumber);  
 
-    blocks.iterateAccounts(stateRoot, (key, value) => {
+    blocks.iterateSecureTrie(stateRoot, (key, value) => {
 
         if (key && value) {
             const acc = new Account(value);
             totalAccounts++;
-            if (acc.isContract()) totalContractAccounts++
+            if (acc.isContract()) {
+                totalContractValues++;
+                blocks.iterateSecureTrie(acc.stateRoot, (keyC, valueC) => {
+                    if (keyC && valueC) {
+                        totalContractValues++;
+                    }
+                });
+            }
         } else {
             if (totalAccounts > 0) {
-                console.log(`Accounts: ${blockNumber} -> ${totalAccounts}, ${totalContractAccounts}`);
+                console.log(`Accounts: ${blockNumber} -> ${totalAccounts}, ${totalContractAccounts}, ${totalContractValues}`);
                 console.timeEnd('Blocks-Account-' + blockNumber);
             }
         }
@@ -83,7 +91,7 @@ analyseAccountsCB = ((blockNumber, blockHashStr, stateRootStr, transactionTrieSt
 });
 
 /**
- * This callback analyses Account State Trie
+ * This callback analyses Transaction Trie.
  * @type {analyseAccountsCB}
  */
 analyseTransactionCB = ((blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr) => {
@@ -94,7 +102,7 @@ analyseTransactionCB = ((blockNumber, blockHashStr, stateRootStr, transactionTri
     console.time('Blocks-Transactions-' + blockNumber);
 
     // console.log(transactionTrieStr + "->" + trieRoot)
-    blocks.iterateTransactionsTrie(trieRoot, (key, value) => {
+    blocks.iterateTrie(trieRoot, (key, value) => {
         if (key && value) {
             const trans = new Transaction(value);
             console.log("Tx:" + trans);
@@ -103,6 +111,32 @@ analyseTransactionCB = ((blockNumber, blockHashStr, stateRootStr, transactionTri
             if (totalTransactions > 0) {
                 console.log(`Transactions: ${blockNumber} -> ${totalTransactions}`);
                 console.timeEnd('Blocks-Transactions-' + blockNumber);
+            }
+        }
+    });
+});
+
+/**
+ * This callback analyses Receipt Trie
+ * @type {analyseAccountsCB}
+ */
+analyseReceiptCB = ((blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr) => {
+
+    const trieRoot = utils.toBuffer(receiptTrieStr);
+    let totalReceipts = 0;
+
+    console.time('Blocks-Receipts-' + blockNumber);
+
+    // console.log(transactionTrieStr + "->" + trieRoot)
+    blocks.iterateTrie(trieRoot, (key, value) => {
+        if (key && value) {
+            // const trans = new Transaction(value);
+            console.log("Tx:" + value);
+            totalReceipts++;
+        } else {
+            if (totalReceipts > 0) {
+                console.log(`Transactions: ${blockNumber} -> ${totalReceipts}`);
+                console.timeEnd('Blocks-Receipts-' + blockNumber);
             }
         }
     });
@@ -123,5 +157,6 @@ blocks.init(dbPath);
 
 const CSV_PATH = "csv/";
 
-// readBlocksCSVFiles(CSV_PATH, analyseAccountsCB);
+readBlocksCSVFiles(CSV_PATH, analyseAccountsCB);
 readBlocksCSVFiles(CSV_PATH, analyseTransactionCB);
+readBlocksCSVFiles(CSV_PATH, analyseReceiptCB);

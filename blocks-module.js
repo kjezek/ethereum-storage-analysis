@@ -110,14 +110,7 @@ exports.iterateBlocks2 = function (start, end, cb1) {
     }
 };
 
-
-/**
- * Iterate over all accounts of a block
- * @param stateRoot trie root
- * @param cb1 callback
- */
-exports.iterateAccounts = function(stateRoot, cb1) {
-    let trie = new SecTrie(db, stateRoot);
+function streamOnTrie(trie, cb1) {
     let stream = trie.createReadStream()
         .on('data', function (data) {
             cb1(data.key, data.value);
@@ -125,21 +118,24 @@ exports.iterateAccounts = function(stateRoot, cb1) {
         .on('end', function () {
             cb1(null, null);  // signal end
         })
+}
+
+/**
+ * Iterate over all accounts of a block
+ * @param root trie root
+ * @param cb1 callback
+ */
+exports.iterateSecureTrie = function(root, cb1) {
+    let trie = new SecTrie(db, root);
+    streamOnTrie(trie, cb1);
 };
 
 /**
  * Iterate over all transactions of a block
- * @param transactionRoot trie root
+ * @param root trie root
  * @param cb1 callback
  */
-exports.iterateTransactionsTrie = function(transactionRoot, cb1) {
-    let trie = new Trie(db, transactionRoot);
-    let stream = trie.createReadStream()
-        .on('data', function (data) {
-            cb1(data.key, data.value);
-        })
-        .on('end', function () {
-            cb1(null, null);  // signal end
-        })
-
+exports.iterateTrie = function(root, cb1) {
+    let trie = new Trie(db, root);
+    streamOnTrie(trie, cb1);
 };
