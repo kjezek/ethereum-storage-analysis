@@ -27,6 +27,7 @@ class Deviation {
  * Read data about blocks and trigger Trie analysis
  * @param file
  * @param cb callback
+ * @param onDone invoked when file is processed 
  */
 function readBlocksData(file, cb, onDone) {
     const stream = fs.createReadStream(file);
@@ -55,6 +56,7 @@ function readBlocksData(file, cb, onDone) {
  * Read blocks from CSV files
  * @param path path
  * @param cb callback
+ * @param onDone called when all CSV files are processed
  */
 function readBlocksCSVFiles(path, cb, onDone) {
     fs.readdir(path, (err, files) => {
@@ -64,12 +66,12 @@ function readBlocksCSVFiles(path, cb, onDone) {
         // count how much files we have first
         let num = 0;
         files.forEach((file, index) => {
-            if (file.startsWith("blocks_") && file.endsWith(".csv"))  num++;
+            if (file.startsWith("blocks") && file.endsWith(".csv"))  num++;
         });
 
         files.forEach((file, index) => {
             // read only CSV files with blocks
-            if (file.startsWith("blocks_") && file.endsWith(".csv")) {
+            if (file.startsWith("blocks") && file.endsWith(".csv")) {
                 readBlocksData(path + file, cb, () => {
                     // on done, call on done feedback
                     if ((--num) == 0) onDone();
@@ -237,7 +239,7 @@ const dbPath = args[0];
 /** Init with DB path. */
 blocks.init(dbPath);
 
-const CSV_PATH = "csv/";
+const CSV_PATH = "csv_blocks/";
 const CSV_PATH_RES = "csv_res/";
 
 processAnalysis(CSV_PATH, fs.createWriteStream(CSV_PATH_RES + 'accounts.csv'), analyseAccountsCB);

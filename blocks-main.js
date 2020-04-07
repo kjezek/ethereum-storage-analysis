@@ -31,7 +31,7 @@ function addCsvLineBlock(writeStream, block) {
 function processBlockBatch(startBlock, endBlock) {
 
     const strRange = startBlock + '-' + endBlock;
-    const writeStream = fs.createWriteStream('./csv/blocks_' + strRange + '.csv')
+    const writeStream = fs.createWriteStream('./csv_blocks/blocks_' + strRange + '.csv')
     console.time('Blocks-' + strRange);
 
 // iterate blocks, dump in  CSV
@@ -53,16 +53,17 @@ const args = process.argv.slice(2);
 const dbPath = args[0];
 const startBlock = parseInt(args[1]);
 const endBlock = parseInt(args[2]);
-const stepBlock = parseInt(args[3]);
+const heightBlock = parseInt(args[3]);
+const sampleBlocks = parseInt(args[4]);
 
 
 /** Init with DB path. */
 blocks.init(dbPath);
 
 /** Iterate from first to next block, with given step. */
-for (let from = startBlock; from <= endBlock-stepBlock; from = from+stepBlock) {
+for (let from = startBlock; from <= endBlock-heightBlock; from = from+heightBlock) {
 
-    let to = (from+stepBlock);
+    let to = (from+sampleBlocks);
     let strRange = from + '-' + to;
     console.log('Submitting: ' + strRange);
     processBlockBatch(from, to);
