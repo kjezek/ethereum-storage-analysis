@@ -113,10 +113,10 @@ exports.iterateBlocks2 = function (start, end, cb1) {
 function streamOnTrie(trie, cb1) {
     let stream = trie.createReadStream()
         .on('data', function (data) {
-            cb1(data.key, data.value);
+            cb1(data.key, data.value, data.node, data.depth);
         })
         .on('end', function () {
-            cb1(null, null);  // signal end
+            cb1(null, null, null, null);  // signal end
         })
 }
 

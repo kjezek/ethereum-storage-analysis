@@ -7,19 +7,18 @@ const Account = require('ethereumjs-account').default;
 const Transaction = require('ethereumjs-tx').Transaction;
 const BN = utils.BN;
 
-class Deviation {
+class Statistics {
     constructor() {
         this.array = []
     }
 
     append(value) { this.array.push(value); }
 
-    computeDev() {
-        const n = this.array.length;
-        const mean = this.array.reduce((a,b) => a+b)/n;
-        const s = Math.sqrt(this.array.map(x => Math.pow(x-mean,2)).reduce((a,b) => a+b)/n);
+    mean() { return this.array.reduce((a, b) => a + b) / n;}
 
-        return s;
+    dev(mean) {
+        const n = this.array.length;
+        return Math.sqrt(this.array.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n);
     }
 }
 
@@ -27,7 +26,7 @@ class Deviation {
  * Read data about blocks and trigger Trie analysis
  * @param file
  * @param cb callback
- * @param onDone invoked when file is processed 
+ * @param onDone invoked when file is processed
  */
 function readBlocksData(file, cb, onDone) {
     const stream = fs.createReadStream(file);
@@ -86,36 +85,52 @@ function readBlocksCSVFiles(path, cb, onDone) {
  * This callback analyses Account State Trie
  * @type {analyseAccountsCB}
  */
-analyseAccountsCB = ((stream, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr) => {
+analyseAccountsCB = function(stream, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr) {
 
     let stateRoot = utils.toBuffer(stateRootStr);
     let totalAccounts = 0;
     let totalContractAccounts = 0;
     let totalContractValues = 0;
+    let totalNodes = 0;
+    let nodesSize = 0;
 
-    let accountsDev = new Deviation();
+    let accountsStats = new Statistics();
 
     console.time('Blocks-Account-' + blockNumber);  
 
-    blocks.iterateSecureTrie(stateRoot, (key, value) => {
+    blocks.iterateSecureTrie(stateRoot, (key, value, node, depth) => {
 
-        if (key && value) {
+        // key is non-null always except end of the stream
+        if (key) {
+            totalNodes++;  // increment total number of nodes
+            let size = node.serialize().length;
+            nodesSize += size;
+        }
+
+        // we have value when the leaf has bean reached
+        if (value) {
             let acc = new Account(value);
             totalAccounts++;
+            accountsStats.append(depth);
+
             if (acc.isContract()) {
                 totalContractAccounts++;
-                blocks.iterateSecureTrie(acc.stateRoot, (keyC, valueC) => {
-                    if (keyC && valueC) {
-                        totalContractValues++;
-                    }
-                });
+                // blocks.iterateSecureTrie(acc.stateRoot, (keyC, valueC, nodeC) => {
+                //     if (keyC && valueC) {
+                //         totalContractValues++;
+                //     }
+                // });
             }
-            // accountsDev.append(number of paths); // accumulate number of key paths.
-        } else {
+        }
+
+        // node is null for end of iteration
+        if (!node) {
             if (totalAccounts > 0) {
                 console.log(`Accounts: ${blockNumber} -> ${totalAccounts}, ${totalContractAccounts}, ${totalContractValues}`);
                 console.timeEnd('Blocks-Account-' + blockNumber);
-                addCsvLine(stream, blockNumber, totalAccounts, totalContractAccounts, 0, 0, 0, 0);
+                const mean = accountsStats.mean();
+                const dev = accountsStats.dev(mean);
+                addCsvLine(stream, blockNumber, totalAccounts, totalContractAccounts, totalNodes, mean, dev, nodesSize);
             }
         }
 
@@ -124,13 +139,13 @@ analyseAccountsCB = ((stream, blockNumber, blockHashStr, stateRootStr, transacti
         // console.log(`storageRoot: ${utils.bufferToHex(acc.stateRoot)}`);
         // console.log(`codeHash: ${utils.bufferToHex(acc.codeHash)}`);
     });
-});
+};
 
 /**
  * This callback analyses Transaction Trie.
  * @type {analyseAccountsCB}
  */
-analyseTransactionCB = ((stream, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr) => {
+analyseTransactionCB = function(stream, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr) {
 
     let trieRoot = utils.toBuffer(transactionTrieStr);
     let totalTransactions = 0;
@@ -150,13 +165,13 @@ analyseTransactionCB = ((stream, blockNumber, blockHashStr, stateRootStr, transa
             }
         }
     });
-});
+};
 
 /**
  * This callback analyses Receipt Trie
  * @type {analyseAccountsCB}
  */
-analyseReceiptCB = ((stream, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr) => {
+analyseReceiptCB = function(stream, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr) {
 
     let trieRoot = utils.toBuffer(receiptTrieStr);
     let totalReceipts = 0;
@@ -176,7 +191,7 @@ analyseReceiptCB = ((stream, blockNumber, blockHashStr, stateRootStr, transactio
             }
         }
     });
-});
+};
 
 /**
  * Dump one line in CSV
@@ -199,15 +214,14 @@ function addCsvLine(stream, blockNumber, values, keyPaths, keyPathsDeviation, si
     stream.write(newLine.join(',')+ '\n', () => {});
 }
 
-function addCsvLine(stream, blockNumber, allAccounts, contractAccounts, keyPaths, keyPathsDeviation, sizeNodes, sizeNodesDeviation) {
+function addCsvLine(stream, blockNumber, allAccounts, contractAccounts, numNodes, avrgDepth, devDepth, sizeNodes) {
     const newLine = [];
     newLine.push(blockNumber);
     newLine.push(allAccounts);
     newLine.push(contractAccounts);
-    newLine.push(keyPaths);
-    newLine.push(keyPathsDeviation);
+    newLine.push(numNodes);
+    newLine.push(avrgDepth);
     newLine.push(sizeNodes);
-    newLine.push(sizeNodesDeviation);
     stream.write(newLine.join(',')+ '\n', () => {});
 }
 
@@ -242,7 +256,11 @@ blocks.init(dbPath);
 const CSV_PATH = "csv_blocks/";
 const CSV_PATH_RES = "csv_res/";
 
-processAnalysis(CSV_PATH, fs.createWriteStream(CSV_PATH_RES + 'accounts.csv'), analyseAccountsCB);
-processAnalysis(CSV_PATH, fs.createWriteStream(CSV_PATH_RES + 'transactions.csv'), analyseTransactionCB);
-processAnalysis(CSV_PATH, fs.createWriteStream(CSV_PATH_RES + 'receipts.csv'), analyseReceiptCB);
+processAnalysis(CSV_PATH,
+    fs.createWriteStream(CSV_PATH_RES + 'accounts.csv'),
+    fs.createWriteStream('csv_acc/accounts.csv'),
+    analyseAccountsCB);
+
+// processAnalysis(CSV_PATH, fs.createWriteStream(CSV_PATH_RES + 'transactions.csv'), analyseTransactionCB);
+// processAnalysis(CSV_PATH, fs.createWriteStream(CSV_PATH_RES + 'receipts.csv'), analyseReceiptCB);
 
