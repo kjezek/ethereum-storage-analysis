@@ -7,11 +7,28 @@ const Account = require('ethereumjs-account').default;
 const Transaction = require('ethereumjs-tx').Transaction;
 const BN = utils.BN;
 
+class Deviation {
+    constructor() {
+        this.array = []
+    }
+
+    append(value) { this.array.push(value); }
+
+    computeDev() {
+        const n = this.array.length;
+        const mean = this.array.reduce((a,b) => a+b)/n;
+        const s = Math.sqrt(this.array.map(x => Math.pow(x-mean,2)).reduce((a,b) => a+b)/n);
+
+        return s;
+    }
+}
+
 /**
  * Read data about blocks and trigger Trie analysis
  * @param file
+ * @param cb callback
  */
-function readBlocksData(file, cb) {
+function readBlocksData(file, cb, onDone) {
     const stream = fs.createReadStream(file);
     const rl = readline.createInterface({
         input: stream,
@@ -28,6 +45,10 @@ function readBlocksData(file, cb) {
 
         cb(blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr);
     });
+
+    rl.on('close', () => {
+        onDone();
+    });
 }
 
 /**
@@ -35,51 +56,64 @@ function readBlocksData(file, cb) {
  * @param path path
  * @param cb callback
  */
-function readBlocksCSVFiles(path, cb) {
+function readBlocksCSVFiles(path, cb, onDone) {
     fs.readdir(path, (err, files) => {
 
         if (err) { console.error("Could not list the directory.", err); return; }
 
+        // count how much files we have first
+        let num = 0;
+        files.forEach((file, index) => {
+            if (file.startsWith("blocks_") && file.endsWith(".csv"))  num++;
+        });
+
         files.forEach((file, index) => {
             // read only CSV files with blocks
             if (file.startsWith("blocks_") && file.endsWith(".csv")) {
-                console.log("Opening CSV file: " + file);
-                readBlocksData(path + file, cb);
+                readBlocksData(path + file, cb, () => {
+                    // on done, call on done feedback
+                    if ((--num) == 0) onDone();
+                });
             }
         });
     });
+
 }
 
 /**
  * This callback analyses Account State Trie
  * @type {analyseAccountsCB}
  */
-analyseAccountsCB = ((blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr) => {
+analyseAccountsCB = ((stream, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr) => {
 
-    const stateRoot = utils.toBuffer(stateRootStr);
+    let stateRoot = utils.toBuffer(stateRootStr);
     let totalAccounts = 0;
     let totalContractAccounts = 0;
     let totalContractValues = 0;
+
+    let accountsDev = new Deviation();
 
     console.time('Blocks-Account-' + blockNumber);  
 
     blocks.iterateSecureTrie(stateRoot, (key, value) => {
 
         if (key && value) {
-            const acc = new Account(value);
+            let acc = new Account(value);
             totalAccounts++;
             if (acc.isContract()) {
-                totalContractValues++;
+                totalContractAccounts++;
                 blocks.iterateSecureTrie(acc.stateRoot, (keyC, valueC) => {
                     if (keyC && valueC) {
                         totalContractValues++;
                     }
                 });
             }
+            // accountsDev.append(number of paths); // accumulate number of key paths.
         } else {
             if (totalAccounts > 0) {
                 console.log(`Accounts: ${blockNumber} -> ${totalAccounts}, ${totalContractAccounts}, ${totalContractValues}`);
                 console.timeEnd('Blocks-Account-' + blockNumber);
+                addCsvLine(stream, blockNumber, totalAccounts, totalContractAccounts, 0, 0, 0, 0);
             }
         }
 
@@ -94,9 +128,9 @@ analyseAccountsCB = ((blockNumber, blockHashStr, stateRootStr, transactionTrieSt
  * This callback analyses Transaction Trie.
  * @type {analyseAccountsCB}
  */
-analyseTransactionCB = ((blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr) => {
+analyseTransactionCB = ((stream, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr) => {
 
-    const trieRoot = utils.toBuffer(transactionTrieStr);
+    let trieRoot = utils.toBuffer(transactionTrieStr);
     let totalTransactions = 0;
 
     console.time('Blocks-Transactions-' + blockNumber);
@@ -120,9 +154,9 @@ analyseTransactionCB = ((blockNumber, blockHashStr, stateRootStr, transactionTri
  * This callback analyses Receipt Trie
  * @type {analyseAccountsCB}
  */
-analyseReceiptCB = ((blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr) => {
+analyseReceiptCB = ((stream, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr) => {
 
-    const trieRoot = utils.toBuffer(receiptTrieStr);
+    let trieRoot = utils.toBuffer(receiptTrieStr);
     let totalReceipts = 0;
 
     console.time('Blocks-Receipts-' + blockNumber);
@@ -143,6 +177,53 @@ analyseReceiptCB = ((blockNumber, blockHashStr, stateRootStr, transactionTrieStr
 });
 
 /**
+ * Dump one line in CSV
+ * @param stream
+ * @param blockNumber
+ * @param values
+ * @param keyPaths
+ * @param keyPathsDeviation
+ * @param sizeNodes
+ * @param sizeNodesDeviation
+ */
+function addCsvLine(stream, blockNumber, values, keyPaths, keyPathsDeviation, sizeNodes, sizeNodesDeviation) {
+    const newLine = [];
+    newLine.push(blockNumber);
+    newLine.push(values);
+    newLine.push(keyPaths);
+    newLine.push(keyPathsDeviation);
+    newLine.push(sizeNodes);
+    newLine.push(sizeNodesDeviation);
+    stream.write(newLine.join(',')+ '\n', () => {});
+}
+
+function addCsvLine(stream, blockNumber, allAccounts, contractAccounts, keyPaths, keyPathsDeviation, sizeNodes, sizeNodesDeviation) {
+    const newLine = [];
+    newLine.push(blockNumber);
+    newLine.push(allAccounts);
+    newLine.push(contractAccounts);
+    newLine.push(keyPaths);
+    newLine.push(keyPathsDeviation);
+    newLine.push(sizeNodes);
+    newLine.push(sizeNodesDeviation);
+    stream.write(newLine.join(',')+ '\n', () => {});
+}
+
+/**
+ * Wrap analysis into callbacks
+ * @param stream stream with CSV to dump results
+ * @param cb callback
+ */
+function processAnalysis(stream, cb) {
+
+    readBlocksCSVFiles(CSV_PATH, (blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr) => {
+        cb(stream, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr);
+    }, () => {
+        stream.end();
+    });
+}
+
+/**
  * Main program - read blocks from pre-generated CSV files and
  * generate statistics about the tries.
  */
@@ -156,7 +237,9 @@ const dbPath = args[0];
 blocks.init(dbPath);
 
 const CSV_PATH = "csv/";
+const CSV_PATH_RES = "csv_res/";
 
-readBlocksCSVFiles(CSV_PATH, analyseAccountsCB);
-readBlocksCSVFiles(CSV_PATH, analyseTransactionCB);
-readBlocksCSVFiles(CSV_PATH, analyseReceiptCB);
+processAnalysis(CSV_PATH, fs.createWriteStream(CSV_PATH_RES + 'accounts.csv'), analyseAccountsCB);
+processAnalysis(CSV_PATH, fs.createWriteStream(CSV_PATH_RES + 'transactions.csv'), analyseTransactionCB);
+processAnalysis(CSV_PATH, fs.createWriteStream(CSV_PATH_RES + 'receipts.csv'), analyseReceiptCB);
+

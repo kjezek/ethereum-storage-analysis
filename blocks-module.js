@@ -78,7 +78,7 @@ exports.iterateBlocks = function (cb1) {
             console.log(err || `LATEST BLOCK ${blockNumber}: ${blockHash}`)
             cb(err, block);
         });
-    };
+    }
 };
 
 
