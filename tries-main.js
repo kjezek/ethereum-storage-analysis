@@ -211,12 +211,13 @@ function addCsvLine(stream, blockNumber, allAccounts, contractAccounts, keyPaths
 
 /**
  * Wrap analysis into callbacks
+ * @param blocksDir Dir with blocks_*.csv files
  * @param stream stream with CSV to dump results
  * @param cb callback
  */
-function processAnalysis(stream, cb) {
+function processAnalysis(blocksDir, stream, cb) {
 
-    readBlocksCSVFiles(CSV_PATH, (blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr) => {
+    readBlocksCSVFiles(blocksDir, (blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr) => {
         cb(stream, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr);
     }, () => {
         stream.end();
