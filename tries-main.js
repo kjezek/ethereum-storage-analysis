@@ -239,6 +239,8 @@ function addCsvLineAccount(stream, blockNumber, allAccounts, contractAccounts, n
     newLine.push(avrgDepth);
     newLine.push(devDepth);
     newLine.push(sizeNodes);
+    newLine.push(numNodes*32);  // numNodes = number of keys in the DB, the key size is 32 bytes
+    newLine.push(numNodes*32+numNodes); // total size = size of 32 byte keys PLUS size of nodes
     stream.write(newLine.join(',')+ '\n', () => {});
 }
 

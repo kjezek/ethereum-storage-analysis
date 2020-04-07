@@ -18,9 +18,32 @@ exports.init = function(DB_PATH) {
 
 
 /**
+ * Add a line into a CSV file with blocks
+ * @param writeStream
+ * @param block
+ */
+exports.addCsvLineBlock = function(writeStream, block) {
+    const blockNumber = utils.bufferToInt(block.header.number);
+    const blockHashStr = utils.bufferToHex(block.hash());
+    const stateRootStr = utils.bufferToHex(block.header.stateRoot);
+    const transactionTrieStr = utils.bufferToHex(block.header.transactionsTrie);
+    const receiptTrieStr = utils.bufferToHex(block.header.receiptTrie);
+
+    //console.log(err || `BLOCK ${blockNumber}: ${blockHashStr}`)
+
+    const newLine = [];
+    newLine.push(blockNumber);
+    newLine.push(blockHashStr);
+    newLine.push(stateRootStr);
+    newLine.push(transactionTrieStr);
+    newLine.push(receiptTrieStr);
+    writeStream.write(newLine.join(',')+ '\n', () => {});
+};
+
+/**
  * Iterate all blocks. It starts from the latest one and goes to parents via parent hash
  */
-exports.iterateBlocks = function (cb1) {
+exports.iterateBlocksLatest = function (cb1) {
     const blockchain =  new Blockchain(blockchainOpts);
 
     let blockHash; // current block hash, changed every loop

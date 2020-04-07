@@ -4,45 +4,24 @@ const blocks = require('./blocks-module');
 const fs = require("fs");
 
 
-/**
- * Add a line into a CSV file with blocks
- * @param writeStream
- * @param block
- */
-function addCsvLineBlock(writeStream, block) {
-    const blockNumber = utils.bufferToInt(block.header.number);
-    const blockHashStr = utils.bufferToHex(block.hash());
-    const stateRootStr = utils.bufferToHex(block.header.stateRoot);
-    const transactionTrieStr = utils.bufferToHex(block.header.transactionsTrie);
-    const receiptTrieStr = utils.bufferToHex(block.header.receiptTrie);
-
-    //console.log(err || `BLOCK ${blockNumber}: ${blockHashStr}`)
-
-    const newLine = [];
-    newLine.push(blockNumber);
-    newLine.push(blockHashStr);
-    newLine.push(stateRootStr);
-    newLine.push(transactionTrieStr);
-    newLine.push(receiptTrieStr);
-    writeStream.write(newLine.join(',')+ '\n', () => {});
-}
 
 /** Process one batch of blocks. */
-function processBlockBatch(startBlock, endBlock) {
+function processBlockBatch(writeStream, startBlock, endBlock, onDone) {
 
     const strRange = startBlock + '-' + endBlock;
-    const writeStream = fs.createWriteStream('./csv_blocks/blocks_' + strRange + '.csv')
+    // const writeStream = fs.createWriteStream('./csv_blocks/blocks_' + strRange + '.csv') //  new CSV file for every block
     console.time('Blocks-' + strRange);
 
 // iterate blocks, dump in  CSV
     blocks.iterateBlocks2(startBlock, endBlock, (err, block, blockHash) => {
 
         if (err || !block) {
-            writeStream.end();
+            // writeStream.end();
             console.log(err || `BLOCK DONE`)
             console.timeEnd('Blocks-' + strRange);
+            onDone();
         } else {
-            addCsvLineBlock(writeStream, block);
+            blocks.addCsvLineBlock(writeStream, block);
         }
     });
 }
@@ -60,16 +39,30 @@ const sampleBlocks = parseInt(args[4]);
 /** Init with DB path. */
 blocks.init(dbPath);
 
+const writeStream = fs.createWriteStream('./csv_blocks/blocks.csv');
+let allSubmitted = false;
+let submittedHeights = 0;
+
 /** Iterate from first to next block, with given step. */
 for (let from = startBlock; from <= endBlock-heightBlock; from = from+heightBlock) {
 
     let to = (from+sampleBlocks);
     let strRange = from + '-' + to;
     console.log('Submitting: ' + strRange);
-    processBlockBatch(from, to);
+
+    submittedHeights++;
+
+    processBlockBatch(writeStream, from, to, ()=> {
+        if ((--submittedHeights === 0) && allSubmitted) {
+            writeStream.end();
+            console.log("All submitted work done. Blocks analysed. ");
+        }
+    });
 }
 
-console.log("All processing submitted, please wait results. ");
+allSubmitted = true;
+
+console.log("All processing submitted, please wait results.");
 
 
 
