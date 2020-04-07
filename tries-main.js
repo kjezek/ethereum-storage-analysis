@@ -14,7 +14,10 @@ class Statistics {
 
     append(value) { this.array.push(value); }
 
-    mean() { return this.array.reduce((a, b) => a + b) / n;}
+    mean() {
+        const n = this.array.length;
+        return this.array.reduce((a, b) => a + b) / n;
+    }
 
     dev(mean) {
         const n = this.array.length;
@@ -35,6 +38,8 @@ function readBlocksData(file, cb, onDone) {
         crlfDelay: Infinity
     });
 
+    let lines = 0;
+    let end = false;
     rl.on('line', line => {
         const items = line.split(",");
         const blockNumber = items[0];
@@ -43,11 +48,16 @@ function readBlocksData(file, cb, onDone) {
         const transactionTrieStr = items[3];
         const receiptTrieStr = items[4];
 
-        cb(blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr);
+        lines++;
+
+        cb(blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr, ()=> {
+            if (--lines === 0 && end)
+                onDone();   // invoke done when all lines are processed and the file is already closed.
+        });
     });
 
     rl.on('close', () => {
-        onDone();
+        end = true;
     });
 }
 
@@ -72,8 +82,8 @@ function readBlocksCSVFiles(path, cb, onDone) {
             // read only CSV files with blocks
             if (file.startsWith("blocks") && file.endsWith(".csv")) {
                 readBlocksData(path + file, cb, () => {
-                    // on done, call on done feedback
-                    if ((--num) == 0) onDone();
+                    // on files done, call on done feedback
+                    if ((--num) === 0) onDone();
                 });
             }
         });
@@ -85,7 +95,7 @@ function readBlocksCSVFiles(path, cb, onDone) {
  * This callback analyses Account State Trie
  * @type {analyseAccountsCB}
  */
-analyseAccountsCB = function(stream, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr) {
+analyseAccountsCB = function(stream, streamAcc, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr, onDone) {
 
     let stateRoot = utils.toBuffer(stateRootStr);
     let totalAccounts = 0;
@@ -115,6 +125,9 @@ analyseAccountsCB = function(stream, blockNumber, blockHashStr, stateRootStr, tr
 
             if (acc.isContract()) {
                 totalContractAccounts++;
+                const accountNumber = utils.bufferToHex(key);
+                const stateRootStr = utils.bufferToHex(acc.stateRoot);
+                addCsvLineStorageRoot(streamAcc, blockNumber, accountNumber, stateRootStr);
                 // blocks.iterateSecureTrie(acc.stateRoot, (keyC, valueC, nodeC) => {
                 //     if (keyC && valueC) {
                 //         totalContractValues++;
@@ -130,8 +143,9 @@ analyseAccountsCB = function(stream, blockNumber, blockHashStr, stateRootStr, tr
                 console.timeEnd('Blocks-Account-' + blockNumber);
                 const mean = accountsStats.mean();
                 const dev = accountsStats.dev(mean);
-                addCsvLine(stream, blockNumber, totalAccounts, totalContractAccounts, totalNodes, mean, dev, nodesSize);
+                addCsvLineAccount(stream, blockNumber, totalAccounts, totalContractAccounts, totalNodes, mean, dev, nodesSize);
             }
+            onDone();
         }
 
         // console.log(`nonce: ${new BN(acc.nonce)}`);
@@ -145,7 +159,7 @@ analyseAccountsCB = function(stream, blockNumber, blockHashStr, stateRootStr, tr
  * This callback analyses Transaction Trie.
  * @type {analyseAccountsCB}
  */
-analyseTransactionCB = function(stream, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr) {
+analyseTransactionCB = function(stream, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr, onDone) {
 
     let trieRoot = utils.toBuffer(transactionTrieStr);
     let totalTransactions = 0;
@@ -163,6 +177,7 @@ analyseTransactionCB = function(stream, blockNumber, blockHashStr, stateRootStr,
                 console.log(`Transactions: ${blockNumber} -> ${totalTransactions}`);
                 console.timeEnd('Blocks-Transactions-' + blockNumber);
             }
+            onDone();
         }
     });
 };
@@ -171,7 +186,7 @@ analyseTransactionCB = function(stream, blockNumber, blockHashStr, stateRootStr,
  * This callback analyses Receipt Trie
  * @type {analyseAccountsCB}
  */
-analyseReceiptCB = function(stream, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr) {
+analyseReceiptCB = function(stream, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr, onDone) {
 
     let trieRoot = utils.toBuffer(receiptTrieStr);
     let totalReceipts = 0;
@@ -189,6 +204,7 @@ analyseReceiptCB = function(stream, blockNumber, blockHashStr, stateRootStr, tra
                 console.log(`Transactions: ${blockNumber} -> ${totalReceipts}`);
                 console.timeEnd('Blocks-Receipts-' + blockNumber);
             }
+            onDone();
         }
     });
 };
@@ -214,14 +230,23 @@ function addCsvLine(stream, blockNumber, values, keyPaths, keyPathsDeviation, si
     stream.write(newLine.join(',')+ '\n', () => {});
 }
 
-function addCsvLine(stream, blockNumber, allAccounts, contractAccounts, numNodes, avrgDepth, devDepth, sizeNodes) {
+function addCsvLineAccount(stream, blockNumber, allAccounts, contractAccounts, numNodes, avrgDepth, devDepth, sizeNodes) {
     const newLine = [];
     newLine.push(blockNumber);
     newLine.push(allAccounts);
     newLine.push(contractAccounts);
     newLine.push(numNodes);
     newLine.push(avrgDepth);
+    newLine.push(devDepth);
     newLine.push(sizeNodes);
+    stream.write(newLine.join(',')+ '\n', () => {});
+}
+
+function addCsvLineStorageRoot(stream, blockNumber, accountNumber, storageRoot) {
+    const newLine = [];
+    newLine.push(blockNumber);
+    newLine.push(accountNumber);
+    newLine.push(storageRoot);
     stream.write(newLine.join(',')+ '\n', () => {});
 }
 
@@ -233,10 +258,20 @@ function addCsvLine(stream, blockNumber, allAccounts, contractAccounts, numNodes
  */
 function processAnalysis(blocksDir, stream, cb) {
 
-    readBlocksCSVFiles(blocksDir, (blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr) => {
-        cb(stream, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr);
+    readBlocksCSVFiles(blocksDir, (blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr, onDone) => {
+        cb(stream, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr, onDone);
     }, () => {
         stream.end();
+    });
+}
+
+function processAnalysisAccounts(blocksDir, stream, streamAcc, cb) {
+
+    readBlocksCSVFiles(blocksDir, (blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr, onDone) => {
+        cb(stream, streamAcc, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr, onDone);
+    }, () => {
+        stream.end();
+        streamAcc.end();
     });
 }
 
@@ -256,9 +291,9 @@ blocks.init(dbPath);
 const CSV_PATH = "csv_blocks/";
 const CSV_PATH_RES = "csv_res/";
 
-processAnalysis(CSV_PATH,
+processAnalysisAccounts(CSV_PATH,
     fs.createWriteStream(CSV_PATH_RES + 'accounts.csv'),
-    fs.createWriteStream('csv_acc/accounts.csv'),
+    fs.createWriteStream('csv_acc/accounts_storage.csv'),
     analyseAccountsCB);
 
 // processAnalysis(CSV_PATH, fs.createWriteStream(CSV_PATH_RES + 'transactions.csv'), analyseTransactionCB);
