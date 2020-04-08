@@ -57,11 +57,13 @@ function readBlocksCSVFiles(path, cb, onDone) {
         });
 
         files.forEach((file, index) => {
-            // read only CSV files with blocks
+            // one file contains accounts for one block
             if (file.startsWith("accounts_storage") && file.endsWith(".csv")) {
                 readStorageData(path + file, cb, () => {
                     // on files done, call on done feedback
-                    if ((--num) === 0) onDone();
+                    if ((--num) === 0) {
+                        onDone();
+                    }
                 });
             }
         });
@@ -79,8 +81,6 @@ analyseStorage = function(stream, blockNumber, accountAddress, storageRootStr, o
     let total = 0;
     let stats = new Statistics();
 
-    console.time('Storage-' + accountAddress);
-
     // console.log(transactionTrieStr + "->" + trieRoot)
     blocks.iterateTrie(trieRoot, (key, value, node, depth) => {
 
@@ -93,10 +93,11 @@ analyseStorage = function(stream, blockNumber, accountAddress, storageRootStr, o
 
         if (node) {
             if (total > 0) {
-                console.log(`Storage slots: ${accountAddress} -> ${total}`);
-                console.timeEnd('Storage-' + accountAddress);
+                // console.log(`Storage slots: ${accountAddress} -> ${total}`);
                 const mean = stats.mean();
                 const dev = stats.dev(mean);
+
+                // it produces big files and we do not have to need such a big granularity
                 addCsvLine(stream, blockNumber, accountAddress, total,
                     stats.totalNodes, mean, dev, stats.minValue, stats.maxValue, stats.nodeSize);
             }
