@@ -2,47 +2,12 @@ const utils = require('ethereumjs-util');
 const fs = require("fs");
 const readline = require('readline');
 const blocks = require('./blocks-module');
+const Statistics = require('./blocks-module').Statistics;
 const rlp = require('rlp');
 const Account = require('ethereumjs-account').default;
 const Transaction = require('ethereumjs-tx').Transaction;
 const BN = utils.BN;
 
-class Statistics {
-    constructor() {
-        this.array = []
-        this.totalNodes = 0;
-        this.nodeSize = 0;
-        this.count = 0;
-        this.minValue = 100;
-        this.maxValue = -100;
-    }
-
-    addNode(key, node) {
-        // key is non-null always except end of the stream
-        if (key) {
-            this.totalNodes++;  // increment total number of nodes
-            let size = node.serialize().length;
-            this.nodeSize += size;
-        }
-    }
-
-    append(value) {
-        this.array.push(value);
-        this.count++;
-        if (value > this.maxValue) this.maxValue = value;
-        if (value < this.minValue) this.minValue = value;
-    }
-
-    mean() {
-        const n = this.array.length;
-        return this.array.reduce((a, b) => a + b) / n;
-    }
-
-    dev(mean) {
-        const n = this.array.length;
-        return Math.sqrt(this.array.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n);
-    }
-}
 
 /**
  * Read data about blocks and trigger Trie analysis
