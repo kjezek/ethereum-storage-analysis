@@ -23,8 +23,8 @@ exports.Statistics = class {
         this.totalNodes = 0;
         this.nodeSize = 0;
         this.count = 0;
-        this.minValue = 100;
-        this.maxValue = -100;
+        this.minValue = 10000;
+        this.maxValue = -10000;
     }
 
     addNode(key, node) {

@@ -22,8 +22,9 @@ function readBlocksData(file, cb, onDone) {
         crlfDelay: Infinity
     });
 
-    let lines = 0;
+    let tasks = 0;
     let end = false;
+    const onTasksDone = ()=>{if (--tasks <= 0 && end) onDone()};
     rl.on('line', line => {
         const items = line.split(",");
         const blockNumber = items[0];
@@ -32,16 +33,14 @@ function readBlocksData(file, cb, onDone) {
         const transactionTrieStr = items[3];
         const receiptTrieStr = items[4];
 
-        lines++;
+        tasks++;
 
-        cb(blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr, ()=> {
-            if (--lines === 0 && end)
-                onDone();   // invoke done when all lines are processed and the file is already closed.
-        });
+        cb(blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr, onTasksDone);
     });
 
     rl.on('close', () => {
         end = true;
+        onTasksDone.apply(null, null);
     });
 }
 
@@ -79,14 +78,20 @@ function readBlocksCSVFiles(path, cb, onDone) {
  * This callback analyses Account State Trie
  * @type {analyseAccountsCB}
  */
-analyseAccountsCB = function(stream, streamAcc, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr, onDone) {
+analyseAccountsCB = function(stream, streamStorage, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr, onDone) {
+
+    const fileName = 'csv_acc/accounts_storage_' + blockNumber + '.csv';
+    let streamAcc;
 
     let stateRoot = utils.toBuffer(stateRootStr);
     let totalAccounts = 0;
     let totalContractAccounts = 0;
     let totalContractValues = 0;
-
     let stats = new Statistics();
+
+    // accumulate values globally per block
+    let totalStorage = 0;
+    let statsStorage = new Statistics();
 
     console.time('Blocks-Account-' + blockNumber);  
 
@@ -104,12 +109,20 @@ analyseAccountsCB = function(stream, streamAcc, blockNumber, blockHashStr, state
                 totalContractAccounts++;
                 const accountNumber = utils.bufferToHex(key);
                 const stateRootStr = utils.bufferToHex(acc.stateRoot);
+
+                // This CSV file maps account addresses to state roots.
+                if (!streamAcc) streamAcc = fs.createWriteStream(fileName);
                 addCsvLineStorageRoot(streamAcc, blockNumber, accountNumber, stateRootStr);
-                // blocks.iterateSecureTrie(acc.stateRoot, (keyC, valueC, nodeC) => {
-                //     if (keyC && valueC) {
-                //         totalContractValues++;
-                //     }
-                // });
+
+                // accumulate data for all contracts data
+                blocks.iterateSecureTrie(acc.stateRoot, (keyC, valueC, nodeC, depthC) => {
+                    statsStorage.addNode(keyC, nodeC);  // accumulate node info
+                    if (valueC) {
+                        totalStorage++;
+                        totalContractValues++;
+                        statsStorage.append(depthC);
+                    }
+                });
             }
         }
 
@@ -118,13 +131,33 @@ analyseAccountsCB = function(stream, streamAcc, blockNumber, blockHashStr, state
             if (totalAccounts > 0) {
                 console.log(`Accounts: ${blockNumber} -> ${totalAccounts}, ${totalContractAccounts}, ${totalContractValues}`);
                 console.timeEnd('Blocks-Account-' + blockNumber);
+
+                // TODO - these callback are a bit crazy, but I do not have time at the moment to study something better such as premises
+                let tasks = 1;
+                const onDoneTasks = ()=>{if (--tasks === 0) onDone()};
+
+                if (totalStorage > 0) {
+                    tasks++;
+                    // statistics for storage for all accounts
+                    const meanC = stats.mean();
+                    const devC = stats.dev(meanC);
+                    addCsvLine(streamStorage, blockNumber, totalStorage,
+                        statsStorage.totalNodes, meanC, devC, statsStorage.minValue, statsStorage.maxValue, statsStorage.nodeSize, onDoneTasks);
+                }
+
+                // statistics for accounts
                 const mean = stats.mean();
                 const dev = stats.dev(mean);
                 addCsvLineAccount(stream, blockNumber,
                     totalAccounts, totalContractAccounts,
-                    stats.totalNodes, mean, dev, stats.minValue, stats.maxValue, stats.nodeSize);
+                    stats.totalNodes, mean, dev, stats.minValue, stats.maxValue, stats.nodeSize, onDoneTasks);
+
+
+            } else {
+                onDone();
             }
-            onDone();
+
+            streamAcc.end();
         }
 
         // console.log(`nonce: ${new BN(acc.nonce)}`);
@@ -165,9 +198,10 @@ analyseTransactionCB = function(stream, blockNumber, blockHashStr, stateRootStr,
                 const mean = stats.mean();
                 const dev = stats.dev(mean);
                 addCsvLine(stream, blockNumber, total,
-                    stats.totalNodes, mean, dev, stats.minValue, stats.maxValue, stats.nodeSize);
+                    stats.totalNodes, mean, dev, stats.minValue, stats.maxValue, stats.nodeSize, onDone);
+            } else {
+                onDone();
             }
-            onDone();
         }
     });
 };
@@ -202,9 +236,10 @@ analyseReceiptCB = function(stream, blockNumber, blockHashStr, stateRootStr, tra
                 const mean = stats.mean();
                 const dev = stats.dev(mean);
                 addCsvLine(stream, blockNumber, total,
-                    stats.totalNodes, mean, dev, stats.minValue, stats.maxValue, stats.nodeSize);
+                    stats.totalNodes, mean, dev, stats.minValue, stats.maxValue, stats.nodeSize, onDone);
+            } else {
+                onDone();
             }
-            onDone();
         }
     });
 };
@@ -219,7 +254,7 @@ analyseReceiptCB = function(stream, blockNumber, blockHashStr, stateRootStr, tra
  * @param sizeNodes
  * @param devDepth
  */
-function addCsvLine(stream, blockNumber, counts, numNodes, avrgDepth, devDepth, min, max, sizeNodes) {
+function addCsvLine(stream, blockNumber, counts, numNodes, avrgDepth, devDepth, min, max, sizeNodes, onDone) {
     const newLine = [];
 
     const sizeNodesMB = sizeNodes / 1024 / 1024;
@@ -237,10 +272,10 @@ function addCsvLine(stream, blockNumber, counts, numNodes, avrgDepth, devDepth, 
     newLine.push(keySizesMB);
     newLine.push(keySizesMB + sizeNodesMB); // total size = size of 32 byte keys PLUS size of nodes
 
-    stream.write(newLine.join(',')+ '\n', () => {});
+    stream.write(newLine.join(',')+ '\n', onDone);
 }
 
-function addCsvLineAccount(stream, blockNumber, allAccounts, contractAccounts, numNodes, avrgDepth, devDepth, min, max, sizeNodes) {
+function addCsvLineAccount(stream, blockNumber, allAccounts, contractAccounts, numNodes, avrgDepth, devDepth, min, max, sizeNodes, onDone) {
     const newLine = [];
 
     const sizeNodesMB = sizeNodes / 1024 / 1024;
@@ -259,15 +294,15 @@ function addCsvLineAccount(stream, blockNumber, allAccounts, contractAccounts, n
     newLine.push(keySizesMB);
     newLine.push(keySizesMB + sizeNodesMB); // total size = size of 32 byte keys PLUS size of nodes
 
-    stream.write(newLine.join(',')+ '\n', () => {});
+    stream.write(newLine.join(',')+ '\n', onDone);
 }
 
-function addCsvLineStorageRoot(stream, blockNumber, accountNumber, storageRoot) {
+function addCsvLineStorageRoot(stream, blockNumber, accountNumber, storageRoot, onDone) {
     const newLine = [];
     newLine.push(blockNumber);
     newLine.push(accountNumber);
     newLine.push(storageRoot);
-    stream.write(newLine.join(',')+ '\n', () => {});
+    stream.write(newLine.join(',')+ '\n', onDone);
 }
 
 /**
@@ -285,21 +320,20 @@ function processAnalysis(blocksDir, stream, cb) {
     });
 }
 
-function processAnalysisAccounts(blocksDir, stream, cb) {
+function processAnalysisAccounts(blocksDir, path, cb) {
+
+    const stream = fs.createWriteStream(path + 'accounts.csv')
+    // this accumulates storage data per block
+    const streamStorage = fs.createWriteStream(path + "blocks_storage.csv");
+
+    console.time("Analyse-accounts");
 
     readBlocksCSVFiles(blocksDir, (blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr, onDone) => {
-        const fileName = 'csv_acc/accounts_storage_' + blockNumber + '.csv';
-        const streamAcc = fs.createWriteStream(fileName);
-        cb(stream, streamAcc, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr, ()=>{
-            onDone();
-            streamAcc.end();
-            fs.stat(fileName, (err, stats) => {
-                const size = stats["size"];
-                if (size === 0) fs.unlinkSync(fileName);
-            })
-        });
+        cb(stream, streamStorage, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr, onDone);
     }, () => {
         stream.end();
+        streamStorage.end();
+        console.timeEnd("Analyse-accounts");
     });
 }
 
@@ -319,7 +353,7 @@ blocks.init(dbPath);
 const CSV_PATH = "csv_blocks/";
 const CSV_PATH_RES = "csv_res/";
 
-processAnalysisAccounts(CSV_PATH, fs.createWriteStream(CSV_PATH_RES + 'accounts.csv'), analyseAccountsCB);
+processAnalysisAccounts(CSV_PATH, CSV_PATH_RES, analyseAccountsCB);
 processAnalysis(CSV_PATH, fs.createWriteStream(CSV_PATH_RES + 'transactions.csv'), analyseTransactionCB);
 processAnalysis(CSV_PATH, fs.createWriteStream(CSV_PATH_RES + 'receipts.csv'), analyseReceiptCB);
 

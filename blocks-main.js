@@ -43,6 +43,8 @@ const writeStream = fs.createWriteStream('./csv_blocks/blocks.csv');
 let allSubmitted = false;
 let submittedHeights = 0;
 
+console.time("Export-Blocks-all");
+
 /** Iterate from first to next block, with given step. */
 for (let from = startBlock; from <= endBlock-heightBlock; from = from+heightBlock) {
 
@@ -55,7 +57,7 @@ for (let from = startBlock; from <= endBlock-heightBlock; from = from+heightBloc
     processBlockBatch(writeStream, from, to, ()=> {
         if ((--submittedHeights === 0) && allSubmitted) {
             writeStream.end();
-            console.log("All submitted work done. Blocks analysed. ");
+            console.timeEnd("Export-Blocks-all");
         }
     });
 }

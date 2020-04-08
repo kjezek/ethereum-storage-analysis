@@ -82,7 +82,7 @@ analyseStorage = function(stream, blockNumber, accountAddress, storageRootStr, o
     let stats = new Statistics();
 
     // console.log(transactionTrieStr + "->" + trieRoot)
-    blocks.iterateTrie(trieRoot, (key, value, node, depth) => {
+    blocks.iterateSecureTrie(trieRoot, (key, value, node, depth) => {
 
         stats.addNode(key,  node);
 
