@@ -24,7 +24,7 @@ function readBlocksData(file, cb, onDone) {
 
     let tasks = 0;
     let end = false;
-    const onTasksDone = ()=>{if (--tasks <= 0 && end) onDone()};
+
     rl.on('line', line => {
         const items = line.split(",");
         const blockNumber = items[0];
@@ -35,12 +35,14 @@ function readBlocksData(file, cb, onDone) {
 
         tasks++;
 
-        cb(blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr, onTasksDone);
+        cb(blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr, ()=>{
+            if (--tasks <= 0 && end) onDone()
+        });
     });
 
     rl.on('close', () => {
         end = true;
-        onTasksDone.apply(null, null);
+        if (tasks === 0 && end) onDone();
     });
 }
 
@@ -157,7 +159,7 @@ analyseAccountsCB = function(stream, streamStorage, blockNumber, blockHashStr, s
                 onDone();
             }
 
-            streamAcc.end();
+            if (streamAcc) streamAcc.end();
         }
 
         // console.log(`nonce: ${new BN(acc.nonce)}`);
