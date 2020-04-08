@@ -13,6 +13,8 @@ class Statistics {
         this.totalNodes = 0;
         this.nodeSize = 0;
         this.count = 0;
+        this.minValue = 100;
+        this.maxValue = -100;
     }
 
     addNode(key, node) {
@@ -27,6 +29,8 @@ class Statistics {
     append(value) {
         this.array.push(value);
         this.count++;
+        if (value > this.maxValue) this.maxValue = value;
+        if (value < this.minValue) this.minValue = value;
     }
 
     mean() {
@@ -151,7 +155,9 @@ analyseAccountsCB = function(stream, streamAcc, blockNumber, blockHashStr, state
                 console.timeEnd('Blocks-Account-' + blockNumber);
                 const mean = stats.mean();
                 const dev = stats.dev(mean);
-                addCsvLineAccount(stream, blockNumber, totalAccounts, totalContractAccounts, stats.totalNodes, mean, dev, stats.nodeSize);
+                addCsvLineAccount(stream, blockNumber,
+                    totalAccounts, totalContractAccounts,
+                    stats.totalNodes, mean, dev, stats.minValue, stats.maxValue, stats.nodeSize);
             }
             onDone();
         }
@@ -193,7 +199,8 @@ analyseTransactionCB = function(stream, blockNumber, blockHashStr, stateRootStr,
                 console.timeEnd('Blocks-Transactions-' + blockNumber);
                 const mean = stats.mean();
                 const dev = stats.dev(mean);
-                addCsvLine(stream, blockNumber, total, stats.totalNodes, mean, dev, stats.nodeSize);
+                addCsvLine(stream, blockNumber, total,
+                    stats.totalNodes, mean, dev, stats.minValue, stats.maxValue, stats.nodeSize);
             }
             onDone();
         }
@@ -229,7 +236,8 @@ analyseReceiptCB = function(stream, blockNumber, blockHashStr, stateRootStr, tra
                 console.log(`Transactions: ${blockNumber} -> ${total}`);
                 const mean = stats.mean();
                 const dev = stats.dev(mean);
-                addCsvLine(stream, blockNumber, total, stats.totalNodes, mean, dev, stats.nodeSize);
+                addCsvLine(stream, blockNumber, total,
+                    stats.totalNodes, mean, dev, stats.minValue, stats.maxValue, stats.nodeSize);
             }
             onDone();
         }
@@ -246,7 +254,7 @@ analyseReceiptCB = function(stream, blockNumber, blockHashStr, stateRootStr, tra
  * @param sizeNodes
  * @param devDepth
  */
-function addCsvLine(stream, blockNumber, counts, numNodes, avrgDepth, devDepth, sizeNodes) {
+function addCsvLine(stream, blockNumber, counts, numNodes, avrgDepth, devDepth, min, max, sizeNodes) {
     const newLine = [];
 
     const sizeNodesMB = sizeNodes / 1024 / 1024;
@@ -258,13 +266,16 @@ function addCsvLine(stream, blockNumber, counts, numNodes, avrgDepth, devDepth, 
     newLine.push(numNodes);
     newLine.push(avrgDepth);
     newLine.push(devDepth);
+    newLine.push(min);
+    newLine.push(max);
     newLine.push(sizeNodesMB);
     newLine.push(keySizesMB);
     newLine.push(keySizesMB + sizeNodesMB); // total size = size of 32 byte keys PLUS size of nodes
+
     stream.write(newLine.join(',')+ '\n', () => {});
 }
 
-function addCsvLineAccount(stream, blockNumber, allAccounts, contractAccounts, numNodes, avrgDepth, devDepth, sizeNodes) {
+function addCsvLineAccount(stream, blockNumber, allAccounts, contractAccounts, numNodes, avrgDepth, devDepth, min, max, sizeNodes) {
     const newLine = [];
 
     const sizeNodesMB = sizeNodes / 1024 / 1024;
@@ -277,9 +288,12 @@ function addCsvLineAccount(stream, blockNumber, allAccounts, contractAccounts, n
     newLine.push(numNodes);
     newLine.push(avrgDepth);
     newLine.push(devDepth);
+    newLine.push(min);
+    newLine.push(max);
     newLine.push(sizeNodesMB);
     newLine.push(keySizesMB);
     newLine.push(keySizesMB + sizeNodesMB); // total size = size of 32 byte keys PLUS size of nodes
+
     stream.write(newLine.join(',')+ '\n', () => {});
 }
 
