@@ -25,15 +25,18 @@ exports.Statistics = class {
         this.count = 0;
         this.minValue = 10000;
         this.maxValue = -10000;
+        this.valueSize = 0;
     }
 
-    addNode(key, node) {
+    addNode(key, node, value) {
         // key is non-null always except end of the stream
         if (key) {
             this.totalNodes++;  // increment total number of nodes
             let size = node.serialize().length;
             this.nodeSize += size;
         }
+
+        if (value) this.valueSize += value.length;
     }
 
     append(value) {

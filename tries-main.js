@@ -99,7 +99,7 @@ analyseAccountsCB = function(stream, streamStorage, blockNumber, blockHashStr, s
 
     blocks.iterateSecureTrie(stateRoot, (key, value, node, depth) => {
 
-        stats.addNode(key,  node);
+        stats.addNode(key,  node, value);
 
         // we have value when the leaf has bean reached
         if (value) {
@@ -117,14 +117,15 @@ analyseAccountsCB = function(stream, streamStorage, blockNumber, blockHashStr, s
                 addCsvLineStorageRoot(streamAcc, blockNumber, accountNumber, stateRootStr);
 
                 // accumulate data for all contracts data
-                blocks.iterateSecureTrie(acc.stateRoot, (keyC, valueC, nodeC, depthC) => {
-                    statsStorage.addNode(keyC, nodeC);  // accumulate node info
-                    if (valueC) {
-                        totalStorage++;
-                        totalContractValues++;
-                        statsStorage.append(depthC);
-                    }
-                });
+                // we do this in a separate script to save time here
+                // blocks.iterateSecureTrie(acc.stateRoot, (keyC, valueC, nodeC, depthC) => {
+                //     statsStorage.addNode(keyC, nodeC);  // accumulate node info
+                //     if (valueC) {
+                //         totalStorage++;
+                //         totalContractValues++;
+                //         statsStorage.append(depthC);
+                //     }
+                // });
             }
         }
 
@@ -144,7 +145,8 @@ analyseAccountsCB = function(stream, streamStorage, blockNumber, blockHashStr, s
                     const meanC = stats.mean();
                     const devC = stats.dev(meanC);
                     addCsvLine(streamStorage, blockNumber, totalStorage,
-                        statsStorage.totalNodes, meanC, devC, statsStorage.minValue, statsStorage.maxValue, statsStorage.nodeSize, onDoneTasks);
+                        statsStorage.totalNodes, meanC, devC,
+                        statsStorage.minValue, statsStorage.maxValue, stats.valueSize, statsStorage.nodeSize, onDoneTasks);
                 }
 
                 // statistics for accounts
@@ -152,7 +154,8 @@ analyseAccountsCB = function(stream, streamStorage, blockNumber, blockHashStr, s
                 const dev = stats.dev(mean);
                 addCsvLineAccount(stream, blockNumber,
                     totalAccounts, totalContractAccounts,
-                    stats.totalNodes, mean, dev, stats.minValue, stats.maxValue, stats.nodeSize, onDoneTasks);
+                    stats.totalNodes, mean, dev,
+                    stats.minValue, stats.maxValue, stats.valueSize, stats.nodeSize, onDoneTasks);
 
 
             } else {
@@ -184,7 +187,7 @@ analyseTransactionCB = function(stream, blockNumber, blockHashStr, stateRootStr,
     // console.log(transactionTrieStr + "->" + trieRoot)
     blocks.iterateTrie(trieRoot, (key, value, node, depth) => {
 
-        stats.addNode(key,  node);
+        stats.addNode(key,  node, value);
 
         if (value) {
             const trans = new Transaction(value);
@@ -200,7 +203,7 @@ analyseTransactionCB = function(stream, blockNumber, blockHashStr, stateRootStr,
                 const mean = stats.mean();
                 const dev = stats.dev(mean);
                 addCsvLine(stream, blockNumber, total,
-                    stats.totalNodes, mean, dev, stats.minValue, stats.maxValue, stats.nodeSize, onDone);
+                    stats.totalNodes, mean, dev, stats.minValue, stats.maxValue, stats.valueSize, stats.nodeSize, onDone);
             } else {
                 onDone();
             }
@@ -223,7 +226,7 @@ analyseReceiptCB = function(stream, blockNumber, blockHashStr, stateRootStr, tra
     // console.log(transactionTrieStr + "->" + trieRoot)
     blocks.iterateTrie(trieRoot, (key, value, node, depth) => {
 
-        stats.addNode(key,  node);
+        stats.addNode(key, node, value);
 
         if (value) {
             // const trans = new Transaction(value);
@@ -238,7 +241,7 @@ analyseReceiptCB = function(stream, blockNumber, blockHashStr, stateRootStr, tra
                 const mean = stats.mean();
                 const dev = stats.dev(mean);
                 addCsvLine(stream, blockNumber, total,
-                    stats.totalNodes, mean, dev, stats.minValue, stats.maxValue, stats.nodeSize, onDone);
+                    stats.totalNodes, mean, dev, stats.minValue, stats.maxValue, stats.valueSize, stats.nodeSize, onDone);
             } else {
                 onDone();
             }
@@ -256,12 +259,13 @@ analyseReceiptCB = function(stream, blockNumber, blockHashStr, stateRootStr, tra
  * @param sizeNodes
  * @param devDepth
  */
-function addCsvLine(stream, blockNumber, counts, numNodes, avrgDepth, devDepth, min, max, sizeNodes, onDone) {
+function addCsvLine(stream, blockNumber, counts, numNodes, avrgDepth, devDepth, min, max, valueSize, sizeNodes, onDone) {
     const newLine = [];
 
     const sizeNodesMB = sizeNodes / 1024 / 1024;
     // numNodes = number of keys in the DB, the key size is 32 bytes
-    const keySizesMB = numNodes*30 / 1024 / 1024;
+    const keySizesMB = numNodes*32 / 1024 / 1024;
+    const valueSizeMB = valueSize / 1024 / 1024;
 
     newLine.push(blockNumber);
     newLine.push(counts);
@@ -270,6 +274,7 @@ function addCsvLine(stream, blockNumber, counts, numNodes, avrgDepth, devDepth, 
     newLine.push(devDepth);
     newLine.push(min);
     newLine.push(max);
+    newLine.push(valueSizeMB);
     newLine.push(sizeNodesMB);
     newLine.push(keySizesMB);
     newLine.push(keySizesMB + sizeNodesMB); // total size = size of 32 byte keys PLUS size of nodes
@@ -277,12 +282,13 @@ function addCsvLine(stream, blockNumber, counts, numNodes, avrgDepth, devDepth, 
     stream.write(newLine.join(',')+ '\n', onDone);
 }
 
-function addCsvLineAccount(stream, blockNumber, allAccounts, contractAccounts, numNodes, avrgDepth, devDepth, min, max, sizeNodes, onDone) {
+function addCsvLineAccount(stream, blockNumber, allAccounts, contractAccounts, numNodes, avrgDepth, devDepth, min, max, valueSize, sizeNodes, onDone) {
     const newLine = [];
 
     const sizeNodesMB = sizeNodes / 1024 / 1024;
     // numNodes = number of keys in the DB, the key size is 32 bytes
-    const keySizesMB = numNodes*30 / 1024 / 1024;
+    const keySizesMB = numNodes*32 / 1024 / 1024;
+    const valueSizeMB = valueSize / 1024 / 1024;
 
     newLine.push(blockNumber);
     newLine.push(allAccounts);
@@ -292,6 +298,7 @@ function addCsvLineAccount(stream, blockNumber, allAccounts, contractAccounts, n
     newLine.push(devDepth);
     newLine.push(min);
     newLine.push(max);
+    newLine.push(valueSizeMB);
     newLine.push(sizeNodesMB);
     newLine.push(keySizesMB);
     newLine.push(keySizesMB + sizeNodesMB); // total size = size of 32 byte keys PLUS size of nodes
