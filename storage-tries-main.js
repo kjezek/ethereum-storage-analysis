@@ -17,28 +17,17 @@ function readStorageData(file, cb, onDone) {
         crlfDelay: Infinity
     });
 
-    let lines = 0;
-    let end = false;
-
     rl.on('line', line => {
         const items = line.split(",");
         const blockNumber = items[0];
         const accountAddress = items[1];
         const storageRoot = items[2];
 
-        lines++;
-        cb(blockNumber, accountAddress, storageRoot, ()=> {
-            console.log("XXX")
-            if (--lines === 0 && end) {
-                console.log("YYYY")
-                onDone();   // invoke done when all lines are processed and the file is already closed.
-            }
-        });
+        cb(blockNumber, accountAddress, storageRoot, onDone);
     });
 
     rl.on('close', () => {
-        end = true;
-        if (lines === 0) onDone();
+        cb(null, null, null, onDone);
     });
 }
 
@@ -72,7 +61,7 @@ function readAccountsCSVFiles(path, stream, cb, onDone) {
 }
 
 /**
- * This callback analyses Transaction Trie.
+ * This callback analyses Storage Trie
  * @type {analyseAccountsCB}
  */
 function analyseStorage(filePath, stream, onDone) {
@@ -81,27 +70,30 @@ function analyseStorage(filePath, stream, onDone) {
     let blockNum;
 
     let tasks = 0;
+    let allSubmitted = false
 
     readStorageData(filePath, (blockNumber, accountAddress, storageRoot, onDoneInner)=>{
 
         let trieRoot = utils.toBuffer(storageRoot);
         blockNum = blockNumber;
 
-        tasks++;
-        // console.log(transactionTrieStr + "->" + trieRoot)
-        blocks.iterateSecureTrie(trieRoot, (key, value, node, depth) => {
+        if (blockNumber) {
+            tasks++;
+            // console.log(transactionTrieStr + "->" + trieRoot)
+            blocks.iterateSecureTrie(trieRoot, (key, value, node, depth) => {
 
-            stats.addNode(key, node, value);
-            stats.addValue(value, depth);
+                stats.addNode(key, node, value);
+                stats.addValue(value, depth);
 
-            if (value) {
-            }
-
-            // all tries processed
-            if (!node && --tasks === 0) {
-                onDoneInner();
-            }
-        });
+                if (!node) tasks--;
+                // all tries processed
+                if (tasks === 0 && allSubmitted) {
+                    onDoneInner();
+                }
+            });
+        } else {
+            allSubmitted = true;
+        }
 
     }, ()=>{
         if (stats.countValues > 0) {
