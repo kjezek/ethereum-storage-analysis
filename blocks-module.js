@@ -22,7 +22,7 @@ exports.Statistics = class {
         this.array = []
         this.totalNodes = 0;
         this.nodeSize = 0;
-        this.count = 0;
+        this.countValues = 0;
         this.minValue = 10000;
         this.maxValue = -10000;
         this.valueSize = 0;
@@ -39,11 +39,13 @@ exports.Statistics = class {
         if (value) this.valueSize += value.length;
     }
 
-    append(value) {
-        this.array.push(value);
-        this.count++;
-        if (value > this.maxValue) this.maxValue = value;
-        if (value < this.minValue) this.minValue = value;
+    addValue(value, depth) {
+        if (value) {
+            this.array.push(depth);
+            this.countValues++;
+            if (depth > this.maxValue) this.maxValue = depth;
+            if (depth < this.minValue) this.minValue = depth;
+        }
     }
 
     mean() {

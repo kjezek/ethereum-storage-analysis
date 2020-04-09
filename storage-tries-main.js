@@ -4,7 +4,6 @@ const readline = require('readline');
 const blocks = require('./blocks-module');
 const Statistics = require('./blocks-module').Statistics;
 
-
 /**
  * Read data about blocks and trigger Trie analysis
  * @param file
@@ -20,6 +19,7 @@ function readStorageData(file, cb, onDone) {
 
     let lines = 0;
     let end = false;
+
     rl.on('line', line => {
         const items = line.split(",");
         const blockNumber = items[0];
@@ -27,16 +27,18 @@ function readStorageData(file, cb, onDone) {
         const storageRoot = items[2];
 
         lines++;
-
         cb(blockNumber, accountAddress, storageRoot, ()=> {
-            if (--lines === 0 && end)
+            console.log("XXX")
+            if (--lines === 0 && end) {
+                console.log("YYYY")
                 onDone();   // invoke done when all lines are processed and the file is already closed.
+            }
         });
-
     });
 
     rl.on('close', () => {
         end = true;
+        if (lines === 0) onDone();
     });
 }
 
@@ -58,8 +60,10 @@ function readAccountsCSVFiles(path, stream, cb, onDone) {
         });
 
         files.forEach((file, index) => {
+            console.time('Storage-file-' + file);
             // one file contains accounts for one block
             if (file.startsWith("accounts_storage") && file.endsWith(".csv")) cb(path + file, stream, ()=>{
+                console.timeEnd('Storage-file-' + file);
                 if (--num === 0) onDone();
             });
         });
@@ -71,9 +75,8 @@ function readAccountsCSVFiles(path, stream, cb, onDone) {
  * This callback analyses Transaction Trie.
  * @type {analyseAccountsCB}
  */
-analyseStorage = function(filePath, stream, onDone) {
+function analyseStorage(filePath, stream, onDone) {
 
-    let total = 0;
     let stats = new Statistics();
     let blockNum;
 
@@ -89,10 +92,9 @@ analyseStorage = function(filePath, stream, onDone) {
         blocks.iterateSecureTrie(trieRoot, (key, value, node, depth) => {
 
             stats.addNode(key, node, value);
+            stats.addValue(value, depth);
 
             if (value) {
-                total++;
-                stats.append(depth);
             }
 
             // all tries processed
@@ -102,13 +104,15 @@ analyseStorage = function(filePath, stream, onDone) {
         });
 
     }, ()=>{
-        if (total > 0) {
+        if (stats.countValues > 0) {
             // console.log(`Storage slots: ${accountAddress} -> ${total}`);
             const mean = stats.mean();
             const dev = stats.dev(mean);
 
-            addCsvLine(stream, blockNum, total,
+            addCsvLine(stream, blockNum, stats.countValues,
                 stats.totalNodes, mean, dev, stats.minValue, stats.maxValue, stats.valueSize, stats.nodeSize, onDone);
+        } else {
+            onDone();
         }
     });
 
@@ -158,22 +162,22 @@ function processStorageAnalysis(blocksDir) {
 
     const stream = fs.createWriteStream(CSV_PATH_RES + 'blocks_storage.csv');
     console.time('Storage-all');
-    let numFiles = 0;
-    readAccountsCSVFiles(blocksDir, stream, (path, stream, onDone)=>{
-        numFiles++;
-        console.time('Storage-file-' + path);
-        analyseStorage(path, stream, ()=>{
-            if (--numFiles === 0) {
-                console.timeEnd('Storage-file-' + path);
-                onDone();
-            }
-        })
-    }, ()=> {
+    readAccountsCSVFiles(blocksDir, stream,  analyseStorage, ()=> {
         stream.end()
         console.timeEnd('Storage-all');
     });
 }
 
+// process.on('uncaughtException', (error)  => {
+//     console.log('Oh my god, something terrible happend: ',  error);
+//     process.exit(1); // exit application
+//
+// });
+//
+// process.on('unhandledRejection', (error, promise) => {
+//     console.log(' Oh Lord! We forgot to handle a promise rejection here: ', promise);
+//     console.log(' The error was: ', error );
+// });
 
 /**
  * Main program - read blocks from pre-generated CSV files and

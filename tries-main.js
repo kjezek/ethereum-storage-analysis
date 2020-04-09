@@ -86,7 +86,6 @@ analyseAccountsCB = function(stream, streamStorage, blockNumber, blockHashStr, s
     let streamAcc;
 
     let stateRoot = utils.toBuffer(stateRootStr);
-    let totalAccounts = 0;
     let totalContractAccounts = 0;
     let totalContractValues = 0;
     let stats = new Statistics();
@@ -100,12 +99,11 @@ analyseAccountsCB = function(stream, streamStorage, blockNumber, blockHashStr, s
     blocks.iterateSecureTrie(stateRoot, (key, value, node, depth) => {
 
         stats.addNode(key,  node, value);
+        stats.addValue(value, depth);
 
         // we have value when the leaf has bean reached
         if (value) {
             let acc = new Account(value);
-            totalAccounts++;
-            stats.append(depth);
 
             if (acc.isContract()) {
                 totalContractAccounts++;
@@ -131,8 +129,8 @@ analyseAccountsCB = function(stream, streamStorage, blockNumber, blockHashStr, s
 
         // node is null for end of iteration
         if (!node) {
-            if (totalAccounts > 0) {
-                console.log(`Accounts: ${blockNumber} -> ${totalAccounts}, ${totalContractAccounts}, ${totalContractValues}`);
+            if (stats.countValues > 0) {
+                console.log(`Accounts: ${blockNumber} -> ${stats.countValues}, ${totalContractAccounts}, ${totalContractValues}`);
                 console.timeEnd('Blocks-Account-' + blockNumber);
 
                 // TODO - these callback are a bit crazy, but I do not have time at the moment to study something better such as premises
@@ -153,7 +151,7 @@ analyseAccountsCB = function(stream, streamStorage, blockNumber, blockHashStr, s
                 const mean = stats.mean();
                 const dev = stats.dev(mean);
                 addCsvLineAccount(stream, blockNumber,
-                    totalAccounts, totalContractAccounts,
+                    stats.countValues, totalContractAccounts,
                     stats.totalNodes, mean, dev,
                     stats.minValue, stats.maxValue, stats.valueSize, stats.nodeSize, onDoneTasks);
 
@@ -179,7 +177,6 @@ analyseAccountsCB = function(stream, streamStorage, blockNumber, blockHashStr, s
 analyseTransactionCB = function(stream, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr, onDone) {
 
     let trieRoot = utils.toBuffer(transactionTrieStr);
-    let total = 0;
     let stats = new Statistics();
 
     console.time('Blocks-Transactions-' + blockNumber);
@@ -188,21 +185,20 @@ analyseTransactionCB = function(stream, blockNumber, blockHashStr, stateRootStr,
     blocks.iterateTrie(trieRoot, (key, value, node, depth) => {
 
         stats.addNode(key,  node, value);
+        stats.addValue(value, depth);
 
         if (value) {
             const trans = new Transaction(value);
             console.log("Tx:" + trans);
-            total++;
-            stats.append(depth);
         }
 
         if (node) {
-            if (total > 0) {
-                console.log(`Transactions: ${blockNumber} -> ${total}`);
+            if (stats.countValues > 0) {
+                console.log(`Transactions: ${blockNumber} -> ${stats.countValues}`);
                 console.timeEnd('Blocks-Transactions-' + blockNumber);
                 const mean = stats.mean();
                 const dev = stats.dev(mean);
-                addCsvLine(stream, blockNumber, total,
+                addCsvLine(stream, blockNumber, stats.countValues,
                     stats.totalNodes, mean, dev, stats.minValue, stats.maxValue, stats.valueSize, stats.nodeSize, onDone);
             } else {
                 onDone();
@@ -218,7 +214,6 @@ analyseTransactionCB = function(stream, blockNumber, blockHashStr, stateRootStr,
 analyseReceiptCB = function(stream, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr, onDone) {
 
     let trieRoot = utils.toBuffer(receiptTrieStr);
-    let total = 0;
     let stats = new Statistics();
 
     console.time('Blocks-Receipts-' + blockNumber);
@@ -227,20 +222,19 @@ analyseReceiptCB = function(stream, blockNumber, blockHashStr, stateRootStr, tra
     blocks.iterateTrie(trieRoot, (key, value, node, depth) => {
 
         stats.addNode(key, node, value);
+        stats.addValue(value, depth);
 
         if (value) {
             // const trans = new Transaction(value);
             console.log("Tx Rec:" + value);
-            total++;
-            stats.append(depth);
         }
 
         if (node) {
-            if (total > 0) {
-                console.log(`Transactions: ${blockNumber} -> ${total}`);
+            if (stats.countValues > 0) {
+                console.log(`Transactions: ${blockNumber} -> ${stats.countValues}`);
                 const mean = stats.mean();
                 const dev = stats.dev(mean);
-                addCsvLine(stream, blockNumber, total,
+                addCsvLine(stream, blockNumber, stats.countValues,
                     stats.totalNodes, mean, dev, stats.minValue, stats.maxValue, stats.valueSize, stats.nodeSize, onDone);
             } else {
                 onDone();
