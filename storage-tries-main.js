@@ -32,6 +32,7 @@ function readStorageData(file, cb, onDone) {
             if (--lines === 0 && end)
                 onDone();   // invoke done when all lines are processed and the file is already closed.
         });
+
     });
 
     rl.on('close', () => {
@@ -158,7 +159,7 @@ function processStorageAnalysis(blocksDir) {
     const stream = fs.createWriteStream(CSV_PATH_RES + 'blocks_storage.csv');
     console.time('Storage-all');
     let numFiles = 0;
-    readAccountsCSVFiles(blocksDir, stream, (path, stream, cb, onDone)=>{
+    readAccountsCSVFiles(blocksDir, stream, (path, stream, onDone)=>{
         numFiles++;
         console.time('Storage-file-' + path);
         analyseStorage(path, stream, ()=>{
