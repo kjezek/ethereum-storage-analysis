@@ -13,15 +13,21 @@ function processBlockBatch(writeStream, startBlock, endBlock, onDone) {
     console.time('Blocks-' + strRange);
 
 // iterate blocks, dump in  CSV
+    let tasks = 0;
+    let end = false;
     blocks.iterateBlocks2(startBlock, endBlock, (err, block, blockHash) => {
 
         if (err || !block) {
             // writeStream.end();
             console.log(err || `BLOCK DONE`)
             console.timeEnd('Blocks-' + strRange);
-            onDone();
+            end = true;
+            if (tasks === 0) onDone();  // call done if all CSV writes are done
         } else {
-            blocks.addCsvLineBlock(writeStream, block);
+            tasks++;
+            blocks.addCsvLineBlock(writeStream, block, ()=>{
+                if (--tasks === 0 && end) onDone();  // call don if all processed and all CSV lines written
+            });
         }
     });
 }

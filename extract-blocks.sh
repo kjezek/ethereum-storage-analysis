@@ -9,6 +9,8 @@ BLOCK_HEIGHT=1000000
 BLOCK_SAMPLE=1
 
 rm csv_blocks/*.csv
-node blocks-main.js $DB_PATH $START_BLOCK $END_BLOCK $BLOCK_HEIGHT $BLOCK_SAMPLE
+#node blocks-main.js $DB_PATH $START_BLOCK $END_BLOCK $BLOCK_HEIGHT $BLOCK_SAMPLE
 
-#node tries-main.js $DB_PATH
+node blocks-latest-main.js $DB_PATH
+node tries-main.js $DB_PATH
+node storage-tries-main.js $DB_PATH

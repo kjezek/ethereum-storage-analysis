@@ -101,6 +101,7 @@ function analyseStorage(filePath, stream, onDone) {
             const mean = stats.mean();
             const dev = stats.dev(mean);
 
+            // TODO fix blockNum here - the value is undefined
             addCsvLine(stream, blockNum, stats.countValues,
                 stats.totalNodes, mean, dev, stats.minValue, stats.maxValue, stats.valueSize, stats.nodeSize, onDone);
         } else {

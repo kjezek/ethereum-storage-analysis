@@ -64,7 +64,7 @@ exports.Statistics = class {
  * @param writeStream
  * @param block
  */
-exports.addCsvLineBlock = function(writeStream, block) {
+exports.addCsvLineBlock = function(writeStream, block, onDone) {
     const blockNumber = utils.bufferToInt(block.header.number);
     const blockHashStr = utils.bufferToHex(block.hash());
     const stateRootStr = utils.bufferToHex(block.header.stateRoot);
@@ -79,7 +79,29 @@ exports.addCsvLineBlock = function(writeStream, block) {
     newLine.push(stateRootStr);
     newLine.push(transactionTrieStr);
     newLine.push(receiptTrieStr);
-    writeStream.write(newLine.join(',')+ '\n', () => {});
+    writeStream.write(newLine.join(',')+ '\n', onDone);
+};
+
+/**
+ * Read the last block from the DB
+ * @param cb
+ */
+getLatestBlocks = function(blockchain, cb) {
+    blockchain.getLatestBlock((err, block) => {
+        const blockNumber = utils.bufferToInt(block.header.number);
+        const blockHash = block.hash().toString('hex');
+        console.log(err || `LATEST BLOCK ${blockNumber}: ${blockHash}`)
+        cb(err, block);
+    });
+};
+
+/**
+ * Read the last block from the DB
+ * @param cb
+ */
+exports.getLatestBlock = function(cb) {
+    const blockchain =  new Blockchain(blockchainOpts);
+    getLatestBlocks(blockchain, cb);
 };
 
 /**
@@ -91,7 +113,7 @@ exports.iterateBlocksLatest = function (cb1) {
     let blockHash; // current block hash, changed every loop
 
     /** Start iteration by finding the latest block. */
-    getLatestBlocks((err, block) => {
+    getLatestBlocks(blockchain, (err, block) => {
 
         if (err) return cb1(err);
 
@@ -132,18 +154,6 @@ exports.iterateBlocksLatest = function (cb1) {
         }
     }
 
-    /**
-     * Read the last block from the DB
-     * @param cb
-     */
-    function getLatestBlocks(cb) {
-        blockchain.getLatestBlock((err, block) => {
-            const blockNumber = utils.bufferToInt(block.header.number);
-            const blockHash = block.hash().toString('hex');
-            console.log(err || `LATEST BLOCK ${blockNumber}: ${blockHash}`)
-            cb(err, block);
-        });
-    }
 };
 
 
@@ -169,6 +179,7 @@ exports.iterateBlocks2 = function (start, end, cb1) {
             block = b;
             blockNumber += 1;
 
+            if (blockNumber === end) cb1(null, null, null);  // inform last item
             if (block) cb1(err, block, block.hash());  // callback only if we have data
             if (err && err.type === 'NotFoundError') cb2(null, block); else cb2(err, block);   // Ignore not found errors
         });
