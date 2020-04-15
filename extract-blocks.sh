@@ -10,6 +10,7 @@ DB_PATH="/Users/kjezek/Library/Ethereum/geth/chaindata"
 #BLOCK_HEIGHT=1000000
 #BLOCK_SAMPLE=1
 #node blocks-main.js $DB_PATH $START_BLOCK $END_BLOCK $BLOCK_HEIGHT $BLOCK_SAMPLE
+#node blocks-latest-main.js $DB_PATH
 
 node blocks-one-latest-main.js $DB_PATH
 node tries-main.js $DB_PATH
