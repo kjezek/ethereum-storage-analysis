@@ -4,7 +4,8 @@ HEAP_SIZE=8192
 DB_PATH="/Users/kjezek/Library/Ethereum/geth/chaindata"
 #DB_PATH="/Users/kjezek/Library/Application Support/io.parity.ethereum/chains/ethereum/db/906a34e69aec8c0d/overlayrecent/db"
 
-#rm csv_blocks/*.csv
+rm csv_blocks/*.csv
+rm csv_acc/*.csv
 
 #START_BLOCK=0
 #END_BLOCK=9000000
