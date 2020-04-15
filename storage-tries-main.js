@@ -5,7 +5,7 @@ const blocks = require('./blocks-module');
 const Statistics = require('./blocks-module').Statistics;
 const async = require('async');
 
-const PARALLELISM=1;
+const ACCOUNTS_IN_PARALLEL=10000;
 
 /**
  * Read data about blocks and trigger Trie analysis
@@ -64,8 +64,6 @@ function readAccountsCSVFiles(path, stream, cb, onDone) {
 function analyseStorage(filePath, stream, onDone) {
 
     let stats = new Statistics();
-    let blockNum;
-
     let tasks = 0;
     let allSubmitted = false
 
@@ -73,7 +71,6 @@ function analyseStorage(filePath, stream, onDone) {
     readStorageData(filePath, (blockNumber, accountAddress, storageRoot, onDoneInner)=>{
 
         let trieRoot = utils.toBuffer(storageRoot);
-        blockNum = blockNumber;
 
         if (blockNumber) {
             tasks++;
@@ -83,17 +80,17 @@ function analyseStorage(filePath, stream, onDone) {
                 stats.addNode(key, node, value);
                 stats.addValue(value, depth);
 
-                if (!node) tasks--;
+                if (!node) tasks--;     // leaf reached
                 // all tries processed
                 if (tasks === 0 && allSubmitted) {
-                    onDoneInner();
+                    onDoneInner(blockNumber);
                 }
             });
         } else {
             allSubmitted = true;
         }
 
-    }, ()=>{
+    }, (blockNum)=>{
         console.timeEnd('Storage-file-' + filePath);
 
         if (stats.countValues > 0) {

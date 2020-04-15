@@ -7,22 +7,23 @@ const Account = require('ethereumjs-account').default;
 const Transaction = require('ethereumjs-tx').Transaction;
 const async = require('async');
 
-const BLOCKS_IN_PARALLEL=10000;
+// running less blocks in parallel produces results sooner
+// because a lot of parallel actions prolong single executions
+const BLOCKS_IN_PARALLEL=100;
 
 /**
  * Read data about blocks and trigger Trie analysis
  * @param file
  * @param cb callback
- * @param onDone invoked when file is processed
+ * @param onLine invoked when file is processed
  */
-function readBlocksData(file, cb, onDone) {
+function readBlocksData(file, cb, onLine) {
     const stream = fs.createReadStream(file);
     const rl = readline.createInterface({
         input: stream,
         crlfDelay: Infinity
     });
 
-    let tasks = [];
     rl.on('line', line => {
         const items = line.split(",");
         const blockNumber = items[0];
@@ -32,15 +33,10 @@ function readBlocksData(file, cb, onDone) {
         const receiptTrieStr = items[4];
 
         const fn = (taskCB) => cb(blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr, taskCB);
-        tasks.push(fn);
+        onLine(fn);
     });
 
-    rl.on('close', () => {
-        console.log(`Processing ${tasks.length} blocks.`);
-        // execute in sequence to prevent out-of-memory
-        async.parallelLimit(tasks, BLOCKS_IN_PARALLEL, onDone);
-        // async.series(tasks, onDone);
-    });
+    rl.on('close', () => onLine(null));  // null signals end
 }
 
 /**
@@ -57,12 +53,13 @@ function readBlocksCSVFiles(path, cb, onDone) {
         let tasks = [];
         files.forEach((file, index) => {
             if (file.startsWith("blocks") && file.endsWith(".csv"))  {
-                tasks.push((taskCB)=> readBlocksData(path + file, cb, taskCB));
+                // execute partly in sequence to prevent out-of-memory
+                readBlocksData(path + file, cb, (task)=>{
+                    // add a task to the queue or run execution after last task
+                    if (task) tasks.push(task); else async.parallelLimit(tasks, BLOCKS_IN_PARALLEL, onDone);
+                });
             }
         });
-
-        // execute all in sequence to prevent out-of-memory
-        async.series(tasks, onDone);
     });
 
 }
