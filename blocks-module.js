@@ -179,8 +179,7 @@ exports.iterateBlocks2 = function (start, end, cb1) {
             block = b;
             blockNumber += 1;
 
-            if (blockNumber === end) cb1(null, null, null);  // inform last item
-            if (block) cb1(err, block, block.hash());  // callback only if we have data
+            if (block) cb1(err, block, block.hash());   // callback only if we have data
             if (err && err.type === 'NotFoundError') cb2(null, block); else cb2(err, block);   // Ignore not found errors
         });
     }

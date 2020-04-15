@@ -26,7 +26,7 @@ function processBlockBatch(writeStream, startBlock, endBlock, onDone) {
         } else {
             tasks++;
             blocks.addCsvLineBlock(writeStream, block, ()=>{
-                if (--tasks === 0 && end) onDone();  // call don if all processed and all CSV lines written
+                if (--tasks === 0 && end) onDone();  // call done if all processed and all CSV lines written
             });
         }
     });
@@ -59,7 +59,6 @@ for (let from = startBlock; from <= endBlock-heightBlock; from = from+heightBloc
     console.log('Submitting: ' + strRange);
 
     submittedHeights++;
-
     processBlockBatch(writeStream, from, to, ()=> {
         if ((--submittedHeights === 0) && allSubmitted) {
             writeStream.end();
