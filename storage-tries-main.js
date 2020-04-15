@@ -3,6 +3,9 @@ const fs = require("fs");
 const readline = require('readline');
 const blocks = require('./blocks-module');
 const Statistics = require('./blocks-module').Statistics;
+const async = require('async');
+
+const PARALLELISM=1;
 
 /**
  * Read data about blocks and trigger Trie analysis
@@ -42,22 +45,16 @@ function readAccountsCSVFiles(path, stream, cb, onDone) {
 
         if (err) { console.error("Could not list the directory.", err); return; }
 
-        // count how much files we have first
-        let num = 0;
+        let tasks = []
         files.forEach((file, index) => {
-            if (file.startsWith("accounts_storage") && file.endsWith(".csv"))  num++;
+            if (file.startsWith("accounts_storage") && file.endsWith(".csv"))
+                tasks.push((taskCB) => cb(path + file, stream, taskCB));
         });
 
-        files.forEach((file, index) => {
-            console.time('Storage-file-' + file);
-            // one file contains accounts for one block
-            if (file.startsWith("accounts_storage") && file.endsWith(".csv")) cb(path + file, stream, ()=>{
-                console.timeEnd('Storage-file-' + file);
-                if (--num === 0) onDone();
-            });
-        });
+        // execute all in sequence to prevent out-of-memory
+        // every block has heaps of accounts to analyse
+        async.series(tasks, onDone);
     });
-
 }
 
 /**
@@ -72,6 +69,7 @@ function analyseStorage(filePath, stream, onDone) {
     let tasks = 0;
     let allSubmitted = false
 
+    console.time('Storage-file-' + filePath);
     readStorageData(filePath, (blockNumber, accountAddress, storageRoot, onDoneInner)=>{
 
         let trieRoot = utils.toBuffer(storageRoot);
@@ -96,6 +94,8 @@ function analyseStorage(filePath, stream, onDone) {
         }
 
     }, ()=>{
+        console.timeEnd('Storage-file-' + filePath);
+
         if (stats.countValues > 0) {
             // console.log(`Storage slots: ${accountAddress} -> ${total}`);
             const mean = stats.mean();
@@ -161,16 +161,6 @@ function processStorageAnalysis(blocksDir) {
     });
 }
 
-// process.on('uncaughtException', (error)  => {
-//     console.log('Oh my god, something terrible happend: ',  error);
-//     process.exit(1); // exit application
-//
-// });
-//
-// process.on('unhandledRejection', (error, promise) => {
-//     console.log(' Oh Lord! We forgot to handle a promise rejection here: ', promise);
-//     console.log(' The error was: ', error );
-// });
 
 /**
  * Main program - read blocks from pre-generated CSV files and

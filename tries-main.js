@@ -3,11 +3,11 @@ const fs = require("fs");
 const readline = require('readline');
 const blocks = require('./blocks-module');
 const Statistics = require('./blocks-module').Statistics;
-const rlp = require('rlp');
 const Account = require('ethereumjs-account').default;
 const Transaction = require('ethereumjs-tx').Transaction;
-const BN = utils.BN;
+const async = require('async');
 
+const BLOCKS_IN_PARALLEL=10000;
 
 /**
  * Read data about blocks and trigger Trie analysis
@@ -22,9 +22,7 @@ function readBlocksData(file, cb, onDone) {
         crlfDelay: Infinity
     });
 
-    let tasks = 0;
-    let end = false;
-
+    let tasks = [];
     rl.on('line', line => {
         const items = line.split(",");
         const blockNumber = items[0];
@@ -33,16 +31,15 @@ function readBlocksData(file, cb, onDone) {
         const transactionTrieStr = items[3];
         const receiptTrieStr = items[4];
 
-        tasks++;
-
-        cb(blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr, ()=>{
-            if (--tasks <= 0 && end) onDone()
-        });
+        const fn = (taskCB) => cb(blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr, taskCB);
+        tasks.push(fn);
     });
 
     rl.on('close', () => {
-        end = true;
-        if (tasks === 0 && end) onDone();
+        console.log(`Processing ${tasks.length} blocks.`);
+        // execute in sequence to prevent out-of-memory
+        async.parallelLimit(tasks, BLOCKS_IN_PARALLEL, onDone);
+        // async.series(tasks, onDone);
     });
 }
 
@@ -57,21 +54,15 @@ function readBlocksCSVFiles(path, cb, onDone) {
 
         if (err) { console.error("Could not list the directory.", err); return; }
 
-        // count how much files we have first
-        let num = 0;
+        let tasks = [];
         files.forEach((file, index) => {
-            if (file.startsWith("blocks") && file.endsWith(".csv"))  num++;
-        });
-
-        files.forEach((file, index) => {
-            // read only CSV files with blocks
-            if (file.startsWith("blocks") && file.endsWith(".csv")) {
-                readBlocksData(path + file, cb, () => {
-                    // on files done, call on done feedback
-                    if ((--num) === 0) onDone();
-                });
+            if (file.startsWith("blocks") && file.endsWith(".csv"))  {
+                tasks.push((taskCB)=> readBlocksData(path + file, cb, taskCB));
             }
         });
+
+        // execute all in sequence to prevent out-of-memory
+        async.series(tasks, onDone);
     });
 
 }
