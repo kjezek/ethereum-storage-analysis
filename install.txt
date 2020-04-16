@@ -1,11 +1,9 @@
 brew install node
 
-npm install level-rocksdb
+npm install @dooub/rocksdb-nodejs
 npm install level
 npm install asyn
 npm install ethereumjs-blockchain
 npm install ethereumjs-util
 npm install ethereumjs-account
 npm install merkle-patricia-tree
-
-

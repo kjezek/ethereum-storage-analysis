@@ -1,7 +1,8 @@
 const Blockchain = require('ethereumjs-blockchain').default;
 const utils = require('ethereumjs-util');
 const async = require("async");
-const leveldown = require('rocksdb');
+const leveldown = require('@dooub/rocksdb-nodejs');
+// const leveldown = require('rocksdb');
 const levelup = require('levelup');
 const rlp = require('rlp');
 const SecTrie = require('merkle-patricia-tree/secure');
@@ -11,9 +12,9 @@ let db;
 let blockchainOpts;
 
 // Open the RocksDB
-exports.init = function(DB_PATH) {
-    const dbOptions = {  };
-    db = levelup(leveldown(DB_PATH), dbOptions);
+exports.init = function(DB_PATH, onOpen) {
+    const dbOptions = { createIfMissing : false };
+    db = levelup(leveldown(DB_PATH), dbOptions, onOpen);
     blockchainOpts = { db: db, hardfork:  "byzantium", validate : false }
 };
 
