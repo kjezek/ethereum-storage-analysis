@@ -338,13 +338,15 @@ const dbPath = args[0];
 // const endBlock = parseInt(args[2]);
 // const stepBlock = parseInt(args[3]);
 
-/** Init with DB path. */
-blocks.init(dbPath);
-
 const CSV_PATH = "csv_blocks/";
 const CSV_PATH_RES = "csv_res/";
 
-processAnalysisAccounts(CSV_PATH, CSV_PATH_RES, analyseAccountsCB);
-processAnalysis(CSV_PATH, fs.createWriteStream(CSV_PATH_RES + 'transactions.csv'), analyseTransactionCB);
-processAnalysis(CSV_PATH, fs.createWriteStream(CSV_PATH_RES + 'receipts.csv'), analyseReceiptCB);
+main = function () {
+    processAnalysisAccounts(CSV_PATH, CSV_PATH_RES, analyseAccountsCB);
+    processAnalysis(CSV_PATH, fs.createWriteStream(CSV_PATH_RES + 'transactions.csv'), analyseTransactionCB);
+    processAnalysis(CSV_PATH, fs.createWriteStream(CSV_PATH_RES + 'receipts.csv'), analyseReceiptCB);
+}
+
+/** Init with DB path. */
+blocks.init(dbPath, main);
 

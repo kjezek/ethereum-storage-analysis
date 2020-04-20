@@ -98,7 +98,6 @@ function analyseStorage(filePath, stream, onDone) {
             const mean = stats.mean();
             const dev = stats.dev(mean);
 
-            // TODO fix blockNum here - the value is undefined
             addCsvLine(stream, blockNum, stats.countValues,
                 stats.totalNodes, mean, dev, stats.minValue, stats.maxValue, stats.valueSize, stats.nodeSize, onDone);
         } else {
@@ -169,11 +168,13 @@ const dbPath = args[0];
 // const endBlock = parseInt(args[2]);
 // const stepBlock = parseInt(args[3]);
 
-/** Init with DB path. */
-blocks.init(dbPath);
-
 const CSV_PATH = "csv_acc/";
 const CSV_PATH_RES = "csv_res/";
 
-processStorageAnalysis(CSV_PATH);
+main = function() {
+    processStorageAnalysis(CSV_PATH);
+}
+
+/** Init with DB path. */
+blocks.init(dbPath, main);
 

@@ -10,9 +10,9 @@ let db;
 let blockchainOpts;
 
 // Open the RocksDB
-exports.init = function(DB_PATH) {
+exports.init = function(DB_PATH, onOpen) {
     const dbOptions = {  };
-    db = level(DB_PATH, dbOptions)
+    db = level(DB_PATH, dbOptions, onOpen)
     blockchainOpts = { db: db, hardfork:  "byzantium", validate : false }
 };
 
