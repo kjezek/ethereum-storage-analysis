@@ -315,7 +315,7 @@ function processAnalysisAccounts(blocksDir, path, cb) {
 
     const stream = fs.createWriteStream(path + 'accounts.csv')
     // this accumulates storage data per block
-    // const streamStorage = fs.createWriteStream(path + "blocks_storage.csv");
+    const streamStorage = fs.createWriteStream(path + "blocks_storage.csv");
 
     console.time("Analyse-accounts");
 
@@ -323,7 +323,7 @@ function processAnalysisAccounts(blocksDir, path, cb) {
         cb(stream, streamStorage, blockNumber, blockHashStr, stateRootStr, transactionTrieStr, receiptTrieStr, onDone);
     }, () => {
         stream.end();
-        // streamStorage.end();
+        streamStorage.end();
         console.timeEnd("Analyse-accounts");
     });
 }
