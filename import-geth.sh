@@ -9,6 +9,7 @@ BLOCKS_ARRAY=("0-1M.blockchain" "1-2M.blockchain"  "2-3M.blockchain"  "3-4M.bloc
 
 #rm -rf $DB_PATH
 for block in "${BLOCKS_ARRAY[@]}"; do
+  echo "Import of $block"
   $GETH_EXE --datadir "$DB_PATH" import "$BLOCKS_PATH/$block"
   cp -r $DB_PATH "$DB_BLOCKS_PATH/$block"
 done
