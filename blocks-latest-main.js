@@ -5,8 +5,10 @@ const fs = require("fs");
 const args = process.argv.slice(2);
 const dbPath = args[0];
 
+const CSV_PATH = "csv_blocks/";
+
 main = function () {
-    const writeStream = fs.createWriteStream('./csv_blocks/blocks.csv');
+    const writeStream = fs.createWriteStream(CSV_PATH + 'blocks.csv');
 
     console.time("Blocks-latest")
     /** Iterate blocks from latest.  */
@@ -26,11 +28,8 @@ main = function () {
             });
         }
     });
-
-
     console.log("All processing submitted, please wait results.");
 }
-
 
 /** Init with DB path. */
 blocks.init(dbPath, main);

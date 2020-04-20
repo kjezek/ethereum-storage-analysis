@@ -6,6 +6,8 @@ const fs = require("fs");
 const args = process.argv.slice(2);
 const dbPath = args[0];
 
+const CSV_PATH = "csv_blocks/";
+
 main = function() {
     console.time("Blocks-latest")
 
@@ -16,7 +18,7 @@ main = function() {
             console.log(err)
         } else {
             const blockNumber = utils.bufferToInt(block.header.number)
-            const writeStream = fs.createWriteStream('./csv_blocks/blocks_' + blockNumber + '.csv');
+            const writeStream = fs.createWriteStream(CSV_PATH + 'blocks_' + blockNumber + '.csv');
             blocks.addCsvLineBlock(writeStream, block, () => {
                 console.log(err || `BLOCK DONE`)
                 console.timeEnd('Blocks-latest');

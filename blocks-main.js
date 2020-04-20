@@ -41,9 +41,11 @@ const endBlock = parseInt(args[2]);
 const heightBlock = parseInt(args[3]);
 const sampleBlocks = parseInt(args[4]);
 
+const CSV_PATH = "csv_blocks/";
+
 main = function () {
 
-    const writeStream = fs.createWriteStream('./csv_blocks/blocks.csv');
+    const writeStream = fs.createWriteStream(CSV_PATH + 'blocks.csv');
     let allSubmitted = false;
     let submittedHeights = 0;
 

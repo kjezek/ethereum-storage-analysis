@@ -14,6 +14,6 @@ DB_PATH="/Users/kjezek/Library/Ethereum/geth/chaindata"
 #node blocks-main.js $DB_PATH $START_BLOCK $END_BLOCK $BLOCK_HEIGHT $BLOCK_SAMPLE
 #node blocks-latest-main.js $DB_PATH
 
-#node --max-old-space-size=$HEAP_SIZE blocks-one-latest-main.js $DB_PATH
-#node --max-old-space-size=$HEAP_SIZE tries-main.js $DB_PATH
+node --max-old-space-size=$HEAP_SIZE blocks-one-latest-main.js $DB_PATH
+node --max-old-space-size=$HEAP_SIZE tries-main.js $DB_PATH
 node --max-old-space-size=$HEAP_SIZE storage-tries-main.js $DB_PATH
