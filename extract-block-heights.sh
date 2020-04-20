@@ -19,6 +19,6 @@ process_block_height () {
 for block in "${BLOCKS_ARRAY[@]}"; do
 
   mkdir "$block"  "$block/csv_blocks" "$block/csv_acc" "$block/csv_res"
-  (cd "$block" || return; process_block_height "$block"; echo "$block done" ) &
+  (cd "$block" || return; process_block_height "$block" > "$block".log; echo "$block done" ) &
 
 done
