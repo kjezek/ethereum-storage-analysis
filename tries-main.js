@@ -114,6 +114,7 @@ analyseAccountsCB = function(stream, streamStorage, blockNumber, blockHashStr, s
                 // });
             }
 
+            // check progress for every new account
             stats.printProgress(1000);
         }
 

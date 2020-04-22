@@ -80,6 +80,7 @@ function analyseStorage(filePath, stream, onDone) {
                 stats.addNode(key, node, value);
                 stats.addValue(value, depth);
 
+                if (value) stats.printProgress(1000);
                 if (!node) tasks--;     // leaf reached
                 // all tries processed
                 if (tasks === 0 && allSubmitted) {
