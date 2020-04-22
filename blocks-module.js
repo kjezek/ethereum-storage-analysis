@@ -59,7 +59,7 @@ exports.Statistics = class {
             const timeDiff = (end - this.startTime) / 1000;  // ms -> s
             this.startTime = end;
             const speed = this.speedCounter / timeDiff
-            console.log(`Processed ${this.speedCounter} items, speed ${speed} items/s`);
+            console.log(`Processed ${this.countValues} values, speed ${speed} items/s`);
             this.speedCounter = 0;
         }
     }
