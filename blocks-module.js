@@ -18,6 +18,7 @@ exports.init = function(DB_PATH, onOpen) {
 
 
 exports.Statistics = class {
+
     constructor() {
         this.array = []
         this.totalNodes = 0;
@@ -27,6 +28,7 @@ exports.Statistics = class {
         this.maxValue = -10000;
         this.valueSize = 0;
         this.startTime = new Date();
+        this.speedCounter = 0;
     }
 
     addNode(key, node, value) {
@@ -49,14 +51,16 @@ exports.Statistics = class {
         }
     }
 
-    printProgress(value, WHEN_DIFF) {
+    printProgress(WHEN_DIFF) {
+        this.speedCounter++;
         // print progress for debug
-        if (value % WHEN_DIFF === 0) {
+        if (this.speedCounter % WHEN_DIFF === 0) {
             const end = new Date();
             const timeDiff = (end - this.startTime) / 1000;  // ms -> s
             this.startTime = end;
-            const speed = value / timeDiff
-            console.log(`Processed ${value} items, speed ${speed} items/s`);
+            const speed = this.speedCounter / timeDiff
+            console.log(`Processed ${this.speedCounter} items, speed ${speed} items/s`);
+            this.speedCounter = 0;
         }
     }
 

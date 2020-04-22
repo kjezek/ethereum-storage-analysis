@@ -84,7 +84,6 @@ analyseAccountsCB = function(stream, streamStorage, blockNumber, blockHashStr, s
 
     console.time('Blocks-Account-' + blockNumber);
 
-
     blocks.iterateSecureTrie(stateRoot, (key, value, node, depth) => {
 
         stats.addNode(key,  node, value);
@@ -115,7 +114,7 @@ analyseAccountsCB = function(stream, streamStorage, blockNumber, blockHashStr, s
                 // });
             }
 
-            stats.printProgress(stats.countValues, 100000);
+            stats.printProgress(1000);
         }
 
         // node is null for end of iteration
