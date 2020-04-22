@@ -26,6 +26,7 @@ exports.Statistics = class {
         this.minValue = 10000;
         this.maxValue = -10000;
         this.valueSize = 0;
+        this.startTime = new Date();
     }
 
     addNode(key, node, value) {
@@ -45,6 +46,17 @@ exports.Statistics = class {
             this.countValues++;
             if (depth > this.maxValue) this.maxValue = depth;
             if (depth < this.minValue) this.minValue = depth;
+        }
+    }
+
+    printProgress(value, WHEN_DIFF) {
+        // print progress for debug
+        if (value % WHEN_DIFF === 0) {
+            const end = new Date();
+            const timeDiff = (end - this.startTime) / 1000;  // ms -> s
+            this.startTime = end;
+            const speed = value / timeDiff
+            console.log(`Processed ${value} items, speed ${speed} items/s`);
         }
     }
 
