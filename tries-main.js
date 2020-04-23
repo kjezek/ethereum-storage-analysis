@@ -115,7 +115,7 @@ analyseAccountsCB = function(stream, streamStorage, blockNumber, blockHashStr, s
             }
 
             // check progress for every new account
-            stats.printProgress(1000);
+            stats.printProgress(1000000);
         }
 
         // node is null for end of iteration

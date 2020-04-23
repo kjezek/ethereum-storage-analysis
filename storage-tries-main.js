@@ -5,7 +5,7 @@ const blocks = require('./blocks-module');
 const Statistics = require('./blocks-module').Statistics;
 const async = require('async');
 
-const ACCOUNTS_IN_PARALLEL=10000;
+const ACCOUNTS_IN_PARALLEL=1000000;
 
 /**
  * Read data about blocks and trigger Trie analysis
@@ -64,8 +64,7 @@ function readAccountsCSVFiles(path, stream, cb, onDone) {
 function analyseStorage(filePath, stream, onDone) {
 
     let stats = new Statistics();
-    let tasks = 0;
-    let allSubmitted = false
+    let cbTasks = [];
 
     console.time('Storage-file-' + filePath);
     readStorageData(filePath, (blockNumber, accountAddress, storageRoot, onDoneInner)=>{
@@ -73,22 +72,24 @@ function analyseStorage(filePath, stream, onDone) {
         let trieRoot = utils.toBuffer(storageRoot);
 
         if (blockNumber) {
-            tasks++;
-            // console.log(transactionTrieStr + "->" + trieRoot)
-            blocks.iterateSecureTrie(trieRoot, (key, value, node, depth) => {
 
-                stats.addNode(key, node, value);
-                stats.addValue(value, depth);
+            // collect all tasks (TODO this may be memory consuming)
+            cbTasks.push(function (onDoneInner) {
+                // console.log(transactionTrieStr + "->" + trieRoot)
+                blocks.iterateSecureTrie(trieRoot, (key, value, node, depth) => {
 
-                if (value) stats.printProgress(1000);
-                if (!node) tasks--;     // leaf reached
-                // all tries processed
-                if (tasks === 0 && allSubmitted) {
-                    onDoneInner(blockNumber);
-                }
+                    stats.addNode(key, node, value);
+                    stats.addValue(value, depth);
+
+                    if (value) stats.printProgress(1000000);
+                    if (!node) onDoneInner(blockNumber);     // leaf reached
+                });
             });
+
         } else {
-            allSubmitted = true;
+
+            // all lines read - execute
+            async.parallelLimit(cbTasks, ACCOUNTS_IN_PARALLEL, onDoneInner);
         }
 
     }, (blockNum)=>{
