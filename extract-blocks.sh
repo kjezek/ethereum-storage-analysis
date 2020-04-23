@@ -1,6 +1,6 @@
 #!/bin/bash
 
-HEAP_SIZE=8192
+HEAP_SIZE=32896
 DB_PATH="/Users/kjezek/Library/Ethereum/geth/chaindata"
 #DB_PATH="/Users/kjezek/Library/Application Support/io.parity.ethereum/chains/ethereum/db/906a34e69aec8c0d/overlayrecent/db"
 

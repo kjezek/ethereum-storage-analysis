@@ -65,6 +65,7 @@ function analyseStorage(filePath, stream, onDone) {
 
     let stats = new Statistics();
     let cbTasks = [];
+    let bn;
 
     console.time('Storage-file-' + filePath);
     readStorageData(filePath, (blockNumber, accountAddress, storageRoot, onDoneInner)=>{
@@ -72,9 +73,10 @@ function analyseStorage(filePath, stream, onDone) {
         let trieRoot = utils.toBuffer(storageRoot);
 
         if (blockNumber) {
+            bn = blockNumber; // remember block number
 
-            // collect all tasks (TODO this may be memory consuming)
-            cbTasks.push(function (onDoneInner) {
+            // collect all tasks (TODO this may be memory consuming ~ for 8M it needs about 13GB RAM)
+            cbTasks.push(function (onDoneTask) {
                 // console.log(transactionTrieStr + "->" + trieRoot)
                 blocks.iterateSecureTrie(trieRoot, (key, value, node, depth) => {
 
@@ -82,14 +84,13 @@ function analyseStorage(filePath, stream, onDone) {
                     stats.addValue(value, depth);
 
                     if (value) stats.printProgress(1000000);
-                    if (!node) onDoneInner(blockNumber);     // leaf reached
+                    if (!node) onDoneTask(null);     // leaf reached, blockNumber is the same for every line
                 });
             });
 
         } else {
-
             // all lines read - execute
-            async.parallelLimit(cbTasks, ACCOUNTS_IN_PARALLEL, onDoneInner);
+            async.parallelLimit(cbTasks, ACCOUNTS_IN_PARALLEL, ()=>onDoneInner(bn));
         }
 
     }, (blockNum)=>{
