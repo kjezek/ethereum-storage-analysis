@@ -1,38 +1,12 @@
 const utils = require('ethereumjs-util');
 const fs = require("fs");
-const readline = require('readline');
 const blocks = require('./blocks-module');
 const Statistics = require('./blocks-module').Statistics;
 const async = require('async');
+const lineByLine = require('n-readlines');
 
 const ACCOUNTS_IN_PARALLEL=1000000;
 
-/**
- * Read data about blocks and trigger Trie analysis
- * @param file
- * @param cb callback
- * @param onDone invoked when file is processed
- */
-function readStorageData(file, cb, onDone) {
-    const stream = fs.createReadStream(file);
-    const rl = readline.createInterface({
-        input: stream,
-        crlfDelay: Infinity
-    });
-
-    rl.on('line', line => {
-        const items = line.split(",");
-        const blockNumber = items[0];
-        const accountAddress = items[1];
-        const storageRoot = items[2];
-
-        cb(blockNumber, accountAddress, storageRoot, onDone);
-    });
-
-    rl.on('close', () => {
-        cb(null, null, null, onDone);
-    });
-}
 
 /**
  * Read Storage roots from the CSV files
@@ -64,36 +38,31 @@ function readAccountsCSVFiles(path, stream, cb, onDone) {
 function analyseStorage(filePath, stream, onDone) {
 
     let stats = new Statistics();
-    let cbTasks = [];
-    let bn;
 
     console.time('Storage-file-' + filePath);
-    readStorageData(filePath, (blockNumber, accountAddress, storageRoot, onDoneInner)=>{
+    // iterate all files
+    const liner = new lineByLine(filePath);
+    let tasks = 0;
+    while (line = liner.next()) {
+        const items = line.toString().split(",");
+        const blockNumber = items[0];
+        const accountAddress = items[1];
+        const storageRoot = items[2];
 
-        let trieRoot = utils.toBuffer(storageRoot);
+        // submit analysis of the storage root
+        tasks++;
+        const trieRoot = utils.toBuffer(storageRoot);
+        blocks.iterateSecureTrie(trieRoot, (key, value, node, depth) => {
 
-        if (blockNumber) {
-            bn = blockNumber; // remember block number
+            stats.addNode(key, node, value);
+            stats.addValue(value, depth);
 
-            // collect all tasks (TODO this may be memory consuming ~ for 8M it needs about 13GB RAM)
-            cbTasks.push(function (onDoneTask) {
-                // console.log(transactionTrieStr + "->" + trieRoot)
-                blocks.iterateSecureTrie(trieRoot, (key, value, node, depth) => {
+            if (value) stats.printProgress(1000000);
+            if (!node && --tasks === 0) saveStats(stats, blockNumber);     // leaf reached, blockNumber is the same for every line
+        });
+    }
 
-                    stats.addNode(key, node, value);
-                    stats.addValue(value, depth);
-
-                    if (value) stats.printProgress(1000000);
-                    if (!node) onDoneTask(null);     // leaf reached, blockNumber is the same for every line
-                });
-            });
-
-        } else {
-            // all lines read - execute
-            async.parallelLimit(cbTasks, ACCOUNTS_IN_PARALLEL, ()=>onDoneInner(bn));
-        }
-
-    }, (blockNum)=>{
+    function saveStats(stats, blockNum) {
         console.timeEnd('Storage-file-' + filePath);
 
         if (stats.countValues > 0) {
@@ -102,14 +71,14 @@ function analyseStorage(filePath, stream, onDone) {
             const dev = stats.dev(mean);
 
             addCsvLine(stream, blockNum, stats.countValues,
-                stats.totalNodes, mean, dev, stats.minValue, stats.maxValue, stats.valueSize, stats.nodeSize, onDone);
+                stats.totalNodes, mean, dev, stats.minValue, stats.maxValue, stats.valueSize, stats.nodeSize,
+                onDone);
         } else {
             onDone();
         }
-    });
+    }
 
-
-};
+}
 
 /**
  * Dump one line in CSV
