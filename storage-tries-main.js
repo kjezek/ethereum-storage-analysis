@@ -90,6 +90,7 @@ function analyseStorage(filePath, stream, onDone) {
 
         } else {
             // all lines read - execute
+            console.log("all lines red, lines: " + cbTasks.length)
             async.parallelLimit(cbTasks, ACCOUNTS_IN_PARALLEL, ()=>onDoneInner(bn));
         }
 
