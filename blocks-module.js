@@ -20,7 +20,7 @@ exports.init = function(DB_PATH, onOpen) {
 exports.Statistics = class {
 
     constructor() {
-        this.array = []
+        // this.array = []
         this.totalNodes = 0;
         this.nodeSize = 0;
         this.countValues = 0;
@@ -29,6 +29,8 @@ exports.Statistics = class {
         this.valueSize = 0;
         this.startTime = new Date();
         this.speedCounter = 0;
+        this.avrg = -1;
+        this.deviat = 0;
     }
 
     addNode(key, node, value) {
@@ -44,7 +46,20 @@ exports.Statistics = class {
 
     addValue(value, depth) {
         if (value) {
-            this.array.push(depth);
+            //  https://math.stackexchange.com/questions/1153794/adding-to-an-average-without-unknown-total-sum/1153800#1153800
+            // this.array.push(depth);
+
+            const prevN = this.countValues;
+            const prevAvrg = this.avrg;
+            const x = depth;
+            //  avrg computes as: https://math.stackexchange.com/questions/1153794/adding-to-an-average-without-unknown-total-sum/1153800#1153800
+            if (this.avrg === -1) this.avrg = x; else
+                this.avrg = (this.avrg * prevN + x) / (prevN + 1);
+
+            // mean computed as: https://math.stackexchange.com/questions/775391/can-i-calculate-the-new-standard-deviation-when-adding-a-value-without-knowing-t
+            if (prevN === 0) this.deviat = 0; else
+                this.deviat = ((prevN-1) * this.deviat + (x - this.avrg) * (x - prevAvrg) / prevN);
+
             this.countValues++;
             if (depth > this.maxValue) this.maxValue = depth;
             if (depth < this.minValue) this.minValue = depth;
@@ -65,13 +80,15 @@ exports.Statistics = class {
     }
 
     mean() {
-        const n = this.array.length;
-        return this.array.reduce((a, b) => a + b) / n;
+        // const n = this.array.length;
+        // return this.array.reduce((a, b) => a + b) / n;
+        return this.avrg;
     }
 
     dev(mean) {
-        const n = this.array.length;
-        return Math.sqrt(this.array.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n);
+        // const n = this.array.length;
+        // return Math.sqrt(this.array.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n);
+        return this.deviat;
     }
 }
 
