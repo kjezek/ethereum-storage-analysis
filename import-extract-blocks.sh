@@ -4,6 +4,7 @@ HEAP_SIZE=32986
 GETH_EXE=/home/kjezek/go-ethereum/build/bin/geth
 BLOCKS_PATH=/mnt/backup/kirk/blocks
 DB_PATH=/home/kjezek/_geth_db
+ANALYSER_PATH=/home/kjezek/ethereum_storage_analysis
 
 BLOCKS_ARRAY=("0-1M.blockchain" "1-2M.blockchain"  "2-3M.blockchain"  "3-4M.blockchain"  "4-5M.blockchain"  "5-6M.blockchain"  "6-7M.blockchain"  "7-8M.blockchain" "8-9M.blockchain")
 
@@ -26,6 +27,7 @@ for block in "${BLOCKS_ARRAY[@]}"; do
 
   # analyse block height
   echo "Analysis of $block"
+  cd $ANALYSER_PATH
   mkdir "$block"  "$block/csv_blocks" "$block/csv_acc" "$block/csv_res"
-  cd "$block" || return; process_block_height "$block"; cd ..
+  cd "$block"; process_block_height "$block";
 done

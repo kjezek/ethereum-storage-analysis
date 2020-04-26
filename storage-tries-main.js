@@ -5,7 +5,7 @@ const blocks = require('./blocks-module');
 const Statistics = require('./blocks-module').Statistics;
 const async = require('async');
 
-const ACCOUNTS_IN_PARALLEL=1000000;
+const ACCOUNTS_IN_PARALLEL=1000;
 
 /**
  * Read data about blocks and trigger Trie analysis
@@ -90,7 +90,7 @@ function analyseStorage(filePath, stream, onDone) {
 
         } else {
             // all lines read - execute
-            console.log("all lines red, lines: " + cbTasks.length)
+            console.log("all lines from csv_acc red, lines: " + cbTasks.length)
             async.parallelLimit(cbTasks, ACCOUNTS_IN_PARALLEL, ()=>onDoneInner(bn));
         }
 
