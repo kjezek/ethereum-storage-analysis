@@ -20,7 +20,7 @@ exports.init = function(DB_PATH, onOpen) {
 exports.Statistics = class {
 
     constructor() {
-        // this.array = []
+        this.array = []
         this.totalNodes = 0;
         this.nodeSize = 0;
         this.countValues = 0;
@@ -87,8 +87,8 @@ exports.Statistics = class {
 
     dev(mean) {
         // const n = this.array.length;
-        // return Math.sqrt(this.array.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n);
-        return this.deviat;
+        // const m =  Math.sqrt(this.array.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n);
+        return Math.sqrt(this.deviat);
     }
 }
 
