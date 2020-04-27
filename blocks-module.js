@@ -58,7 +58,7 @@ exports.Statistics = class {
 
             // mean computed as: https://math.stackexchange.com/questions/775391/can-i-calculate-the-new-standard-deviation-when-adding-a-value-without-knowing-t
             if (prevN === 0) this.deviat = 0; else
-                this.deviat = ((prevN-1) * this.deviat + (x - this.avrg) * (x - prevAvrg) / prevN);
+                this.deviat = ((prevN-1) * this.deviat + (x - this.avrg) * (x - prevAvrg)) / prevN;
 
             this.countValues++;
             if (depth > this.maxValue) this.maxValue = depth;
