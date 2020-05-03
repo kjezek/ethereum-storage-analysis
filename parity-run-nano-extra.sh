@@ -24,7 +24,7 @@ rm -rf $DB_PATH
 
 for i in "${!BLOCKS_SAMPLES_ARRAY[@]}"; do
 
-  CURRENT_BLOCKS_SAMPLES_PATH="$SAMPLE_BLOCKS_PATH/${!BLOCKS_SAMPLES_ARRAY[i]}"
+  CURRENT_BLOCKS_SAMPLES_PATH="$SAMPLE_BLOCKS_PATH/${!BLOCKS_SAMPLES_ARRAY[$i]}"
   block="${!BLOCKS_SAMPLES_ARRAY[i]}"
 
   ## Run experiment
@@ -39,7 +39,7 @@ for i in "${!BLOCKS_SAMPLES_ARRAY[@]}"; do
   echo "Result done for: aggregated.$block.txt"
 
   ## FUll import - we must import the data because the DB is incompatible with original parity DB
-  CURRENT_BLOCKS_FULL_PATH="$FULL_BLOCKS_PATH/${!BLOCKS_FULL_ARRAY[i]}"
+  CURRENT_BLOCKS_FULL_PATH="$FULL_BLOCKS_PATH/${!BLOCKS_FULL_ARRAY[$i]}"
   echo "Full import for ${CURRENT_BLOCKS_FULL_PATH}, DB: ${DB_PATH}"
   $PARITY_PATH_EXE import "$CURRENT_BLOCKS_FULL_PATH" --base-path="$DB_PATH"
 
