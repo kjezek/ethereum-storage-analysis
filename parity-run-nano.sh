@@ -16,8 +16,6 @@ JAVA_ANALYSER_EXE="$PARITY_PATH/research-1911/parityloganalyser/target/parity-lo
 BLOCKS_SAMPLES_ARRAY=("0.1M.blockchain" "1.1M.blockchain" "2.1M.blockchain" "3.1M.blockchain" "4.1M.blockchain" "5.1M.blockchain" "6.1M.blockchain" "7.1M.blockchain" "8.1M.blockchain" "9.1M.blockchain")
 DB_BLOCK_HEIGHTS_DUMPS=( "io.parity.0" "io.parity.1" "io.parity.2" "io.parity.3" "io.parity.4" "io.parity.5" "io.parity.6" "io.parity.7" "io.parity.8" "io.parity.9")
 
-rm *.csv
-
 for i in "${!BLOCKS_SAMPLES_ARRAY[@]}"; do
 
   # Maybe we need to copy DB dumps from the backup hdd as SSD will run out of space
@@ -26,12 +24,12 @@ for i in "${!BLOCKS_SAMPLES_ARRAY[@]}"; do
   CURRENT_BLOCK_PATH="$DB_PATH/blocks/${!BLOCKS_SAMPLES_ARRAY[i]}"
   block="${!BLOCKS_SAMPLES_ARRAY[i]}"
 
+  rm *.csv
   $PARITY_PATH_EXE import "$CURRENT_BLOCK_PATH" --base-path="$CURRENT_DB_PATH"  --no-warp
 
   java -jar $JAVA_ANALYSER_EXE .
   mv aggregated.csv.txt "aggregated.$block.txt"
   mkdir "$LOGS_BACKUP_PATH/logs.$block"
   mv *.csv "$LOGS_BACKUP_PATH/logs.$block/"
-  rm *.csv
 
 done
