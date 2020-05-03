@@ -20,8 +20,8 @@ for i in "${!BLOCKS_SAMPLES_ARRAY[@]}"; do
 
   # Maybe we need to copy DB dumps from the backup hdd as SSD will run out of space
 
-  CURRENT_DB_PATH="$DB_PATH/${!DB_BLOCK_HEIGHTS_DUMPS[i]}"
-  CURRENT_BLOCK_PATH="$DB_PATH/blocks/${!BLOCKS_SAMPLES_ARRAY[i]}"
+  CURRENT_DB_PATH="$DB_PATH/${DB_BLOCK_HEIGHTS_DUMPS[$i]}"
+  CURRENT_BLOCK_PATH="$DB_PATH/blocks/${BLOCKS_SAMPLES_ARRAY[$i]}"
   block="${!BLOCKS_SAMPLES_ARRAY[i]}"
 
   rm *.csv
