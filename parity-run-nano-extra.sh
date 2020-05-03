@@ -7,7 +7,7 @@
 # Run for Extra Storage experiment - it must import due to DB incompatibility
 #
 
-PARITY_PATH=/home/kjezek/parity-ethereum/target/release/parity
+PARITY_PATH=/home/kjezek/parity-ethereum/
 PARITY_PATH_EXE="$PARITY_PATH/target/release/parity"
 LOGS_BACKUP_PATH=/mnt/backup/kamil
 FULL_BLOCKS_PATH=/mnt/backup/kirk/blocks/

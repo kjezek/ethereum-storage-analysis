@@ -6,7 +6,7 @@
 # Collect data in CSV files
 #
 
-PARITY_PATH=/home/kjezek/parity-ethereum/target/release/parity
+PARITY_PATH=/home/kjezek/parity-ethereum/
 PARITY_PATH_EXE="$PARITY_PATH/target/release/parity"
 LOGS_BACKUP_PATH=/mnt/backup/kamil
 DB_PATH=/home/kjezek/_etherum_data/
