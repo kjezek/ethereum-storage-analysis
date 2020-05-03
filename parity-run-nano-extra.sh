@@ -28,6 +28,7 @@ for i in "${!BLOCKS_SAMPLES_ARRAY[@]}"; do
   block="${!BLOCKS_SAMPLES_ARRAY[i]}"
 
   ## Run experiment
+  echo "Running experiment for ${CURRENT_BLOCKS_SAMPLES_PATH}, DB: ${DB_PATH}"
   rm *.csv
   $PARITY_PATH_EXE import "$CURRENT_BLOCKS_SAMPLES_PATH" --base-path="$DB_PATH"  --no-warp
 
@@ -35,9 +36,11 @@ for i in "${!BLOCKS_SAMPLES_ARRAY[@]}"; do
   mv aggregated.csv.txt "aggregated.$block.txt"
   mkdir "$LOGS_BACKUP_PATH/logs_extra_storage.$block"
   mv *.csv "$LOGS_BACKUP_PATH/logs_extra_storage.$block/"
+  echo "Result done for: aggregated.$block.txt"
 
   ## FUll import - we must import the data because the DB is incompatible with original parity DB
   CURRENT_BLOCKS_FULL_PATH="$FULL_BLOCKS_PATH/${!BLOCKS_FULL_ARRAY[i]}"
+  echo "Full import for ${CURRENT_BLOCKS_FULL_PATH}, DB: ${DB_PATH}"
   $PARITY_PATH_EXE import "$CURRENT_BLOCKS_FULL_PATH" --base-path="$DB_PATH"
 
 done
