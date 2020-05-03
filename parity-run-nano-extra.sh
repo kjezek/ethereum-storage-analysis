@@ -25,7 +25,7 @@ rm -rf $DB_PATH
 for i in "${!BLOCKS_SAMPLES_ARRAY[@]}"; do
 
   CURRENT_BLOCKS_SAMPLES_PATH="$SAMPLE_BLOCKS_PATH/${BLOCKS_SAMPLES_ARRAY[$i]}"
-  block="${!BLOCKS_SAMPLES_ARRAY[i]}"
+  block="${BLOCKS_SAMPLES_ARRAY[i]}"
 
   ## Run experiment
   echo "Running experiment for ${CURRENT_BLOCKS_SAMPLES_PATH}, DB: ${DB_PATH}"

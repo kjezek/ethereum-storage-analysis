@@ -22,7 +22,7 @@ for i in "${!BLOCKS_SAMPLES_ARRAY[@]}"; do
 
   CURRENT_DB_PATH="$DB_PATH/${DB_BLOCK_HEIGHTS_DUMPS[$i]}"
   CURRENT_BLOCK_PATH="$DB_PATH/blocks/${BLOCKS_SAMPLES_ARRAY[$i]}"
-  block="${!BLOCKS_SAMPLES_ARRAY[i]}"
+  block="${BLOCKS_SAMPLES_ARRAY[i]}"
 
   rm *.csv
   $PARITY_PATH_EXE import "$CURRENT_BLOCK_PATH" --base-path="$CURRENT_DB_PATH"  --no-warp
