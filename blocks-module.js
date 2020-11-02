@@ -12,8 +12,11 @@ let blockchainOpts;
 // Open the RocksDB
 exports.init = function(DB_PATH, onOpen) {
     const dbOptions = {  };
-    db = level(DB_PATH, dbOptions, onOpen)
-    blockchainOpts = { db: db, hardfork:  "byzantium", validate : false }
+    db = level(DB_PATH, dbOptions, function(err) {
+        if (err) console.log("DB Access Err: " + err);
+        blockchainOpts = { db: db, hardfork:  "byzantium", validate : false }
+        onOpen();
+    });
 };
 
 
