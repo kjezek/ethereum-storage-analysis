@@ -97,7 +97,7 @@ function analyseStorage(filePath, stream, streamDepths, onDone) {
                         // collect max depth and size of current trie in the global statistics
                         if (oneTriStat.maxValue >=0) {
                             stats.addTrieStat(oneTriStat);
-                            addCsvStorageTrie(storageStream, blockNumber, oneTriStat.maxValue, oneTriStat.nodeSize, oneTriStat.totalNodes, ()=>
+                            addCsvStorageTrie(storageStream, blockNumber, oneTriStat.maxValue, oneTriStat.nodeSize, oneTriStat.totalNodes, oneTriStat.countValues, ()=>
                             onDoneTask(null));
                         } else onDoneTask(null)
                     }
@@ -168,6 +168,7 @@ function addCsvDepths(stream, blockNumber, stats, onDone) {
     const trieDepths = stats.trieDepths
     const trieSizes = stats.trieSizes
     const trieNodes = stats.trieNodes;
+    const trieValues = stats.trieValues;
     const keys = Object.keys(trieDepths);
     keys.sort((a, b) => a - b);
 
@@ -179,13 +180,14 @@ function addCsvDepths(stream, blockNumber, stats, onDone) {
         newLine.push(trieDepths[key]);
         newLine.push(trieSizes[key] / 1024 / 1024)  // MB
         newLine.push(trieNodes[key])
+        newLine.push(trieValues[key])
         tasks.push(d => stream.write(newLine.join(',')+ '\n', d));
     })
 
     async.series(tasks, onDone);
 }
 
-function addCsvStorageTrie(stream, blockNumber, depth, size, nodes, onDone) {
+function addCsvStorageTrie(stream, blockNumber, depth, size, nodes, values, onDone) {
     const newLine = [];
 
 
@@ -193,6 +195,7 @@ function addCsvStorageTrie(stream, blockNumber, depth, size, nodes, onDone) {
     newLine.push(depth);
     newLine.push(size / 1024 / 1024);
     newLine.push(nodes);
+    newLine.push(values);
 
     stream.write(newLine.join(',')+ '\n', onDone);
 }

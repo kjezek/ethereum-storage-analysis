@@ -37,6 +37,7 @@ exports.Statistics = class {
         this.trieDepths = []
         this.trieSizes = []
         this.trieNodes = []
+        this.trieValues = []
         this.trieMaxNodes = []
         this.trieMaxSize = []
     }
@@ -46,6 +47,7 @@ exports.Statistics = class {
         const depth = oneTriStat.maxValue
         const size = oneTriStat.nodeSize
         const nodes = oneTriStat.totalNodes
+        const values = oneTriStat.countValues
 
         let count = this.trieDepths[depth];
         if (count === undefined) count = 0;
@@ -59,6 +61,9 @@ exports.Statistics = class {
         if (currentNodes === undefined) currentNodes = 0;
         this.trieNodes[depth] = nodes + currentNodes;
 
+        let currentValues = this.trieValues[depth];
+        if (currentValues === undefined) currentValues = 0;
+        this.trieValues[depth] = currentValues + values;
     }
 
     addNode(key, node, value, depth) {
