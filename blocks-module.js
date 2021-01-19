@@ -34,9 +34,21 @@ exports.Statistics = class {
         this.speedCounter = 0;
         this.avrg = -1;
         this.deviat = 0;
+        this.trieDepths = []
+        this.trieSizes = []
     }
 
-    addNode(key, node, value) {
+    addTrieStat(depth, size) {
+        let count = this.trieDepths[depth];
+        if (count === undefined) count = 0;
+        this.trieDepths[depth] = count + 1;
+
+        let s =  this.trieSizes[depth];
+        if (s === undefined) s = 0;
+        this.trieSizes[depth] = s + size;
+    }
+
+    addNode(key, node, value, depth) {
         // key is non-null always except end of the stream
         if (key) {
             this.totalNodes++;  // increment total number of nodes

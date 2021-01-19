@@ -86,7 +86,7 @@ analyseAccountsCB = function(stream, streamStorage, blockNumber, blockHashStr, s
 
     blocks.iterateSecureTrie(stateRoot, (key, value, node, depth) => {
 
-        stats.addNode(key,  node, value);
+        stats.addNode(key,  node, value, depth);
         stats.addValue(value, depth);
 
         // we have value when the leaf has bean reached
@@ -175,7 +175,7 @@ analyseTransactionCB = function(stream, blockNumber, blockHashStr, stateRootStr,
     // console.log(transactionTrieStr + "->" + trieRoot)
     blocks.iterateTrie(trieRoot, (key, value, node, depth) => {
 
-        stats.addNode(key,  node, value);
+        stats.addNode(key,  node, value, depth);
         stats.addValue(value, depth);
 
         if (value) {
@@ -212,7 +212,7 @@ analyseReceiptCB = function(stream, blockNumber, blockHashStr, stateRootStr, tra
     // console.log(transactionTrieStr + "->" + trieRoot)
     blocks.iterateTrie(trieRoot, (key, value, node, depth) => {
 
-        stats.addNode(key, node, value);
+        stats.addNode(key, node, value, depth);
         stats.addValue(value, depth);
 
         if (value) {
