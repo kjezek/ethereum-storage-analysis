@@ -36,16 +36,29 @@ exports.Statistics = class {
         this.deviat = 0;
         this.trieDepths = []
         this.trieSizes = []
+        this.trieNodes = []
+        this.trieMaxNodes = []
+        this.trieMaxSize = []
     }
 
-    addTrieStat(depth, size) {
+    addTrieStat(oneTriStat) {
+
+        const depth = oneTriStat.maxValue
+        const size = oneTriStat.nodeSize
+        const nodes = oneTriStat.totalNodes
+
         let count = this.trieDepths[depth];
         if (count === undefined) count = 0;
         this.trieDepths[depth] = count + 1;
 
-        let s =  this.trieSizes[depth];
+        let s = this.trieSizes[depth];
         if (s === undefined) s = 0;
         this.trieSizes[depth] = s + size;
+
+        let currentNodes = this.trieNodes[depth];
+        if (currentNodes === undefined) currentNodes = 0;
+        this.trieNodes[depth] = nodes + currentNodes;
+
     }
 
     addNode(key, node, value, depth) {
