@@ -66,11 +66,13 @@ function analyseStorage(filePath, stream, streamDepths, onDone) {
     let stats = new Statistics();
     let cbTasks = [];
     let bn;
+    let storageStream;
 
     console.time('Storage-file-' + filePath);
     readStorageData(filePath, (blockNumber, accountAddress, storageRoot, onDoneInner)=>{
 
         let trieRoot = utils.toBuffer(storageRoot);
+        if (storageStream === undefined) storageStream = fs.createWriteStream(CSV_PATH_STORAGE + 'storage_' + blockNumber + '.csv');
 
         if (blockNumber) {
             bn = blockNumber; // remember block number
@@ -93,8 +95,11 @@ function analyseStorage(filePath, stream, streamDepths, onDone) {
                     // leaf iterated - end
                     if (!node) {
                         // collect max depth and size of current trie in the global statistics
-                        if (oneTriStat.maxValue >=0) stats.addTrieStat(oneTriStat);
-                        onDoneTask(null);
+                        if (oneTriStat.maxValue >=0) {
+                            stats.addTrieStat(oneTriStat);
+                            addCsvStorageTrie(storageStream, blockNumber, oneTriStat.maxValue, oneTriStat.nodeSize, oneTriStat.totalNodes, ()=>
+                            onDoneTask(null));
+                        } else onDoneTask(null)
                     }
                 });
             });
@@ -102,7 +107,7 @@ function analyseStorage(filePath, stream, streamDepths, onDone) {
         } else {
             // all lines read - execute
             console.log("all lines from csv_acc red, lines: " + cbTasks.length)
-            async.parallelLimit(cbTasks, ACCOUNTS_IN_PARALLEL, ()=>onDoneInner(bn));
+            async.parallelLimit(cbTasks, ACCOUNTS_IN_PARALLEL, ()=>storageStream.end(()=>onDoneInner(bn)));
         }
 
     }, (blockNum)=>{
@@ -180,6 +185,18 @@ function addCsvDepths(stream, blockNumber, stats, onDone) {
     async.series(tasks, onDone);
 }
 
+function addCsvStorageTrie(stream, blockNumber, depth, size, nodes, onDone) {
+    const newLine = [];
+
+
+    newLine.push(blockNumber);
+    newLine.push(depth);
+    newLine.push(size / 1024 / 1024);
+    newLine.push(nodes);
+
+    stream.write(newLine.join(',')+ '\n', onDone);
+}
+
 /**
  * Wrap analysis into callbacks
  * @param blocksDir Dir with blocks_*.csv files
@@ -211,6 +228,7 @@ const dbPath = args[0];
 
 const CSV_PATH = "csv_acc/";
 const CSV_PATH_RES = "csv_res/";
+const CSV_PATH_STORAGE = "csv_storage/";
 
 main = function() {
     processStorageAnalysis(CSV_PATH);
