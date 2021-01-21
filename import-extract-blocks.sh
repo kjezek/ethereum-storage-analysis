@@ -6,7 +6,7 @@ BLOCKS_PATH=/mnt/backup/kirk/blocks
 DB_PATH=/home/kjezek/_geth_db
 ANALYSER_PATH=/home/kjezek/ethereum-storage-analysis/
 
-BLOCKS_ARRAY=("0-1M.blockchain" "1-2M.blockchain"  "2-3M.blockchain"  "3-4M.blockchain"  "4-5M.blockchain"  "5-6M.blockchain"  "6-7M.blockchain"  "7-8M.blockchain" "8-9M.blockchain")
+BLOCKS_ARRAY=("0-1M.blockchain" "1-2M.blockchain"  "2-3M.blockchain"  "3-4M.blockchain"  "4-5M.blockchain"  "5-6M.blockchain"  "6-7M.blockchain"  "7-8M.blockchain" "8-9M.blockchain"  "9-10M.blockchain" "10-11M.blockchain")
 
 process_block_height () {
   local block=$1
@@ -28,6 +28,6 @@ for block in "${BLOCKS_ARRAY[@]}"; do
   # analyse block height
   echo "Analysis of $block"
   cd $ANALYSER_PATH
-  mkdir "$block"  "$block/csv_blocks" "$block/csv_acc" "$block/csv_res"
+  mkdir "$block"  "$block/csv_blocks" "$block/csv_acc" "$block/csv_res" "$block/csv_storage"
   cd "$block"; process_block_height "$block";
 done

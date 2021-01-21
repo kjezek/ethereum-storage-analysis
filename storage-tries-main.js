@@ -76,6 +76,7 @@ function analyseStorage(filePath, stream, streamDepths, onDone) {
 
         if (blockNumber) {
             bn = blockNumber; // remember block number
+            let counter = 0;
 
             // collect all tasks (TODO this may be memory consuming ~ for 8M it needs about 13GB RAM)
             cbTasks.push(function (onDoneTask) {
