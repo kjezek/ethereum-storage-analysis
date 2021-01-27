@@ -98,7 +98,7 @@ function analyseStorage(filePath, stream, streamDepths, onDone) {
                         // collect max depth and size of current trie in the global statistics
                         if (oneTriStat.maxValue >=0) {
                             stats.addTrieStat(oneTriStat);
-                            addCsvStorageTrie(storageStream, blockNumber, oneTriStat.maxValue, oneTriStat.nodeSize, oneTriStat.totalNodes, oneTriStat.countValues, ()=>
+                            addCsvStorageTrie(storageStream, blockNumber, storageRoot, oneTriStat.maxValue, oneTriStat.nodeSize, oneTriStat.totalNodes, oneTriStat.countValues, ()=>
                             onDoneTask(null));
                         } else onDoneTask(null)
                     }
@@ -188,11 +188,12 @@ function addCsvDepths(stream, blockNumber, stats, onDone) {
     async.series(tasks, onDone);
 }
 
-function addCsvStorageTrie(stream, blockNumber, depth, size, nodes, values, onDone) {
+function addCsvStorageTrie(stream, blockNumber, rootHash, depth, size, nodes, values, onDone) {
     const newLine = [];
 
 
     newLine.push(blockNumber);
+    newLine.push(rootHash);
     newLine.push(depth);
     newLine.push(size / 1024 / 1024);
     newLine.push(nodes);
